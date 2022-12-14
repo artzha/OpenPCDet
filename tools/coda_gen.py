@@ -72,7 +72,7 @@ def generate_points(in_root, out_root, trajectories, label_set):
                 continue
             #Convert .bin to .npy
             bin_path = os.path.join(trajdir, bin_file)
-            pc_np   = np.fromfile(bin_path, dtype=np.float32).reshape(-1, 3)
+            pc_np   = np.fromfile(bin_path, dtype=np.float32).reshape(-1, 4)
 
             npy_file = "%06d.npy"%frame
             npy_path = os.path.join(npy_file_dir, npy_file)
@@ -125,7 +125,7 @@ def generate_imagesets(in_root, out_root, trajectories):
 
 def main():
     DATASET_ROOT = "/home/arthur/AMRL/Datasets/CODa"
-    DATASET_OUT = "/home/arthur/AMRL/Benchmarks/OpenPCDet/data/coda"
+    DATASET_OUT = "/home/arthur/AMRL/Benchmarks/OpenPCDet/data/custom"
     TRAJECTORIES    = [2, 3]
 
     # File Checking

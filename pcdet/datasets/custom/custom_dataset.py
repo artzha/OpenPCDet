@@ -42,7 +42,7 @@ class CustomDataset(DatasetTemplate):
             with open(info_path, 'rb') as f:
                 infos = pickle.load(f)
                 custom_infos.extend(infos)
-
+        # import pdb; pdb.set_trace()
         self.custom_infos.extend(custom_infos)
         self.logger.info('Total samples for CUSTOM dataset: %d' % (len(custom_infos)))
 
@@ -247,6 +247,7 @@ def create_custom_infos(dataset_cfg, class_names, data_path, save_path, workers=
     custom_infos_train = dataset.get_infos(
         class_names, num_workers=workers, has_label=True, num_features=num_features
     )
+    
     with open(train_filename, 'wb') as f:
         pickle.dump(custom_infos_train, f)
     print('Custom info train file is saved to %s' % train_filename)
@@ -277,7 +278,7 @@ if __name__ == '__main__':
         ROOT_DIR = (Path(__file__).resolve().parent / '../../../').resolve()
         create_custom_infos(
             dataset_cfg=dataset_cfg,
-            class_names=['Vehicle', 'Pedestrian', 'Cyclist'],
+            class_names=['Car', 'Person', 'Bike'],
             data_path=ROOT_DIR / 'data' / 'custom',
             save_path=ROOT_DIR / 'data' / 'custom',
         )
