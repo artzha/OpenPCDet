@@ -124,8 +124,9 @@ def generate_imagesets(in_root, out_root, trajectories):
     test_file.close()
 
 def main():
-    DATASET_ROOT = "/home/arthur/AMRL/Datasets/CODa"
-    DATASET_OUT = "/home/arthur/AMRL/Benchmarks/OpenPCDet/data/custom"
+    # DATASET_ROOT = "/home/arthur/AMRL/Datasets/CODa"
+    DATASET_ROOT = "/robodata/arthurz/CODa"
+    DATASET_OUT = "/home/arthurz/Benchmarks/OpenPCDet/data/custom"
     TRAJECTORIES    = [2, 3]
 
     # File Checking
