@@ -48,9 +48,12 @@ class DemoDataset(DatasetTemplate):
             points = np.fromfile(self.sample_file_list[index], dtype=np.float32).reshape(-1, 4)
         elif self.ext == '.npy':
             points = np.load(self.sample_file_list[index])
+            # import pdb; pdb.set_trace()
         else:
             raise NotImplementedError
 
+        # Added for KITTI offset
+        # points[:, 2] -= 1.2
         input_dict = {
             'points': points,
             'frame_id': index,

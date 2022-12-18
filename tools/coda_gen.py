@@ -3,10 +3,12 @@ import pdb
 import json
 
 import numpy as np
+import open3d as o3d
 
 def generate_labels(in_root, out_root, trajectories):
     label_set = {str(traj): [] for traj in trajectories}
     category_list = ["Car", "Person", "Bike"]
+    category_list_map = {"Car": "Car", "Person": "Pedestrian", "Bike": "Cyclist"}
 
     for traj in trajectories:
         print("Generating labels for trajectory %d"%traj)
@@ -43,6 +45,8 @@ def generate_labels(in_root, out_root, trajectories):
                 category    = label["classId"]
                 if category not in category_list:
                     continue
+                else:
+                    category= category_list_map[category]
                 label_str   = " ".join(map(str, [x, y, z, dx, dy, dz, heading, category]))
                 cust_txt.write(label_str+"\n")
 
@@ -65,7 +69,8 @@ def generate_points(in_root, out_root, trajectories, label_set):
             os.makedirs(npy_file_dir)
 
         bin_files = [lfile for lfile in sorted(os.listdir(trajdir)) if os.path.isfile(
-            os.path.join(trajdir, lfile) ) ] 
+            os.path.join(trajdir, lfile) ) ]
+
         for bin_file in bin_files:
             frame = int(bin_file.split("_")[-1].split(".")[0])
             if frame not in label_set[str(traj)]:
@@ -74,9 +79,40 @@ def generate_points(in_root, out_root, trajectories, label_set):
             bin_path = os.path.join(trajdir, bin_file)
             pc_np   = np.fromfile(bin_path, dtype=np.float32).reshape(-1, 4)
 
+            #Downsample from 128 to 64 channels
+            pc_ds_np    = pc_np[:, :4].reshape(1024, 128, 4)
+            pc_ds_np    = pc_ds_np[:, np.arange(0, 128, 2), :]
+            pc_intensity= pc_ds_np[:, :, -1].reshape(-1, 1)
+            pc_ds_np    = pc_ds_np[:, :, :3].reshape(-1, 3)
+
+            #Filter out points in same FOV Velodyne
+            pc_dist     = np.linalg.norm(pc_ds_np[:, :3], axis=1)
+            zero_mask   = pc_dist!=0
+            pc_ds_np    = pc_ds_np[zero_mask]
+            pc_intensity= pc_intensity[zero_mask]
+
+            pc_angle    = np.arcsin(pc_ds_np[:, 2] / pc_dist[zero_mask])
+            fov_mask    = np.abs(pc_angle) <= 0.2338741
+            pc_ds_np    = pc_ds_np[fov_mask, :]
+            pc_intensity= pc_intensity[fov_mask, :]
+
+            #Shift point cloud down to match KITTI
+            pc_ds_np[:, 2] -= 1.2
+            pc_np[:, 2] -= 1.2
+
+            # PCD viewing
+            pcd = o3d.geometry.PointCloud()
+            pcd.points = o3d.utility.Vector3dVector(pc_ds_np)
+            o3d.io.write_point_cloud("/home/arthur/AMRL/tmp/%06d_ds.pcd"%frame, pcd, write_ascii=False)
+
+            pcd = o3d.geometry.PointCloud()
+            pcd.points = o3d.utility.Vector3dVector(pc_np[:, :3])
+            o3d.io.write_point_cloud("/home/arthur/AMRL/tmp/%06d.pcd"%frame, pcd, write_ascii=False)
+
+
             npy_file = "%06d.npy"%frame
             npy_path = os.path.join(npy_file_dir, npy_file)
-            np.save(npy_path, pc_np)
+            np.save(npy_path, np.hstack( (pc_ds_np, pc_intensity) ))
             print("Wrote bin to npy format %s..."%npy_path)
 
 def generate_imagesets(in_root, out_root, trajectories):
@@ -124,9 +160,10 @@ def generate_imagesets(in_root, out_root, trajectories):
     test_file.close()
 
 def main():
-    # DATASET_ROOT = "/home/arthur/AMRL/Datasets/CODa"
-    DATASET_ROOT = "/robodata/arthurz/CODa"
-    DATASET_OUT = "/home/arthurz/Benchmarks/OpenPCDet/data/custom"
+    DATASET_ROOT = "/home/arthur/AMRL/Datasets/CODa"
+    DATASET_OUT = "/home/arthur/AMRL/Benchmarks/OpenPCDet/data/custom"
+    # DATASET_ROOT = "/robodata/arthurz/CODa"
+    # DATASET_OUT = "/home/arthur//Benchmarks/OpenPCDet/data/custom"
     TRAJECTORIES    = [2, 3]
 
     # File Checking
