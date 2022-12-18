@@ -103,10 +103,10 @@ def main():
         for idx, data_dict in enumerate(demo_dataset):
             logger.info(f'Visualized sample index: \t{idx + 1}')
             data_dict = demo_dataset.collate_batch([data_dict])
-            # import pdb; pdb.set_trace()
+            import pdb; pdb.set_trace()
             V.draw_scenes(
-                points=data_dict['points'][:, 1:], ref_boxes=data_dict['gt_boxes'][idx],
-                ref_scores=None, ref_labels=data_dict['gt_labels'][idx]
+                points=data_dict['points'][:, 1:], ref_boxes=data_dict['gt_boxes'][0],
+                ref_scores=None, ref_labels=data_dict['gt_labels'][0]
             )
 
             if not OPEN3D_FLAG:
