@@ -39,8 +39,8 @@ def generate_labels(in_root, out_root, trajectories):
             cust_txt    = open(cust_path, "w+")
             for label in label_list:
                 #Write to output
-                x, y, z     = label["cX"], label['cY'], label['cZ']
-                dx, dy, dz  = label["l"]/2, label["w"]/2, label["h"]/2
+                x, y, z     = label["cX"], label['cY'], label['cZ'] - 1.2 # Lower labels by 1.2meters in z
+                dx, dy, dz  = label["l"], label["w"], label["h"]
                 heading     = label["y"]
                 category    = label["classId"]
                 if category not in category_list:
@@ -140,7 +140,7 @@ def generate_imagesets(in_root, out_root, trajectories):
 
         # Allocate first 60%train  20%validation 20%test
         num_train   = int(len(label_files)*0.8)
-        num_val     = int(len(label_files)*0) # Use test as val
+        num_val     = int(len(label_files)*0.2) # Use val
         num_test    = len(label_files) - num_train - num_val
 
         # Generate train and val sets
