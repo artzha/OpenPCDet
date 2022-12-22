@@ -74,7 +74,7 @@ class CODataset(DatasetTemplate):
     
     def get_lidar(self, idx):
         lidar_file = self.lidar_list[idx]
-        print("lidar_file", lidar_file)
+
         assert os.path.isfile(lidar_file)
         point_features = np.load(lidar_file)
         return point_features
@@ -103,14 +103,10 @@ class CODataset(DatasetTemplate):
     def __getitem__(self, index):
         if self._merge_all_iters_to_one_epoch:
             index = index % len(self.custom_infos)
-        # print("index ", index)
-        # print("custominfos ", self.custom_infos[index])
 
         info = copy.deepcopy(self.custom_infos[index])
         sample_idx = info['point_cloud']['lidar_idx']
-
         points = self.get_lidar(sample_idx)
-
         input_dict = {
             'frame_id': self.sample_id_list[index],
             'points': points
