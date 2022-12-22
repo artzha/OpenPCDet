@@ -9,7 +9,8 @@ from ...utils import box_utils, common_utils
 from ..dataset import DatasetTemplate
 
 
-class CODaDataset(DatasetTemplate):
+
+class CODataset(DatasetTemplate):
     def __init__(self, dataset_cfg, class_names, training=True, root_path=None, logger=None):
         """
         Args:
@@ -24,12 +25,18 @@ class CODaDataset(DatasetTemplate):
         )
         self.split = self.dataset_cfg.DATA_SPLIT[self.mode]
 
-        split_dir = os.path.join(self.root_path, 'ImageSets', (self.split + '.txt'))
+        split_dir = os.path.join(self.root_path, 'ImageSets', (self.split + '.txt')) 
         self.sample_id_list = [x.strip() for x in open(split_dir).readlines()] if os.path.exists(split_dir) else None
+        
+        self.label_list = { file_prefix: os.path.join(self.root_path, self.split, "labels", "%s.txt"%file_prefix) 
+            for file_prefix in self.sample_id_list }
+        self.lidar_list = { file_prefix: os.path.join(self.root_path, self.split, "os1", 
+            "%s.npy"%file_prefix.replace("label", "raw")) for file_prefix in self.sample_id_list }
+
+        self.map_class_to_coda = self.dataset_cfg.MAP_CLASS_TO_CODA
 
         self.custom_infos = []
         self.include_data(self.mode)
-        self.map_class_to_kitti = self.dataset_cfg.MAP_CLASS_TO_KITTI
 
     def include_data(self, mode):
         self.logger.info('Loading CODa dataset.')
@@ -39,7 +46,6 @@ class CODaDataset(DatasetTemplate):
             info_path = self.root_path / info_path
             if not info_path.exists():
                 continue
-
             with open(info_path, 'rb') as f:
                 infos = pickle.load(f)
                 custom_infos.extend(infos)
@@ -48,24 +54,28 @@ class CODaDataset(DatasetTemplate):
         self.logger.info('Total samples for CODa dataset: %d' % (len(custom_infos)))
 
     def get_label(self, idx):
-        label_file = self.root_path / 'labels' / ('%s.txt' % idx)
-        assert label_file.exists()
+        label_file = self.label_list[idx]
+
+        assert os.path.isfile(label_file)
         with open(label_file, 'r') as f:
             lines = f.readlines()
 
         # [N, 8]: (x y z dx dy dz heading_angle category_id)
-        gt_boxes = []
+        gt_boxes = np.empty((0, 7), dtype=np.float32)
         gt_names = []
         for line in lines:
             line_list = line.strip().split(' ')
-            gt_boxes.append(line_list[:-1])
-            gt_names.append(line_list[-1])
 
-        return np.array(gt_boxes, dtype=np.float32), np.array(gt_names)
+            gt_boxes = np.vstack( (gt_boxes, np.array(line_list[:7], dtype=np.float32) ))
+            label_name = ' '.join(line_list[7:])
+            gt_names.append(label_name)
 
+        return gt_boxes, np.array(gt_names)
+    
     def get_lidar(self, idx):
-        lidar_file = self.root_path / 'points' / ('%s.npy' % idx)
-        assert lidar_file.exists()
+        lidar_file = self.lidar_list[idx]
+        print("lidar_file", lidar_file)
+        assert os.path.isfile(lidar_file)
         point_features = np.load(lidar_file)
         return point_features
 
@@ -77,7 +87,12 @@ class CODaDataset(DatasetTemplate):
         self.split = split
 
         split_dir = self.root_path / 'ImageSets' / (self.split + '.txt')
-        self.sample_id_list = [x.strip() for x in open(split_dir).readlines()] if split_dir.exists() else None
+        self.sample_id_list = [x.strip() for x in open(split_dir).readlines()] if os.path.exists(split_dir) else None
+        
+        self.label_list = { file_prefix: os.path.join(self.root_path, self.split, "labels", "%s.txt"%file_prefix) 
+            for file_prefix in self.sample_id_list }
+        self.lidar_list = { file_prefix: os.path.join(self.root_path, self.split, "os1", 
+            "%s.npy"%file_prefix.replace("label", "raw")) for file_prefix in self.sample_id_list }
 
     def __len__(self):
         if self._merge_all_iters_to_one_epoch:
@@ -88,10 +103,14 @@ class CODaDataset(DatasetTemplate):
     def __getitem__(self, index):
         if self._merge_all_iters_to_one_epoch:
             index = index % len(self.custom_infos)
+        # print("index ", index)
+        # print("custominfos ", self.custom_infos[index])
 
         info = copy.deepcopy(self.custom_infos[index])
         sample_idx = info['point_cloud']['lidar_idx']
+
         points = self.get_lidar(sample_idx)
+
         input_dict = {
             'frame_id': self.sample_id_list[index],
             'points': points
@@ -115,26 +134,26 @@ class CODaDataset(DatasetTemplate):
         if 'annos' not in self.custom_infos[0].keys():
             return 'No ground-truth boxes for evaluation', {}
 
-        def kitti_eval(eval_det_annos, eval_gt_annos, map_name_to_kitti):
-            from ..kitti.kitti_object_eval_python import eval as kitti_eval
-            from ..kitti import kitti_utils
+        def coda_eval(eval_det_annos, eval_gt_annos, map_name_to_coda):
+            from ..coda.coda_object_eval_python import eval as coda_eval
+            from ..coda import coda_utils
 
-            kitti_utils.transform_annotations_to_kitti_format(eval_det_annos, map_name_to_kitti=map_name_to_kitti)
-            kitti_utils.transform_annotations_to_kitti_format(
-                eval_gt_annos, map_name_to_kitti=map_name_to_kitti,
+            coda_utils.transform_annotations_to_coda_format(eval_det_annos, map_name_to_coda=map_name_to_coda)
+            coda_utils.transform_annotations_to_coda_format(
+                eval_gt_annos, map_name_to_coda=map_name_to_coda,
                 info_with_fakelidar=self.dataset_cfg.get('INFO_WITH_FAKELIDAR', False)
             )
-            kitti_class_names = [map_name_to_kitti[x] for x in class_names]
-            ap_result_str, ap_dict = kitti_eval.get_official_eval_result(
-                gt_annos=eval_gt_annos, dt_annos=eval_det_annos, current_classes=kitti_class_names
+            coda_class_names = [map_name_to_coda[x] for x in class_names]
+            ap_result_str, ap_dict = coda_eval.get_official_eval_result(
+                gt_annos=eval_gt_annos, dt_annos=eval_det_annos, current_classes=coda_class_names
             )
             return ap_result_str, ap_dict
 
         eval_det_annos = copy.deepcopy(det_annos)
         eval_gt_annos = [copy.deepcopy(info['annos']) for info in self.custom_infos]
 
-        if kwargs['eval_metric'] == 'kitti':
-            ap_result_str, ap_dict = kitti_eval(eval_det_annos, eval_gt_annos, self.map_class_to_kitti)
+        if kwargs['eval_metric'] == 'coda':
+            ap_result_str, ap_dict = kitti_eval(eval_det_annos, eval_gt_annos, self.map_class_to_coda)
         else:
             raise NotImplementedError
 
@@ -169,7 +188,7 @@ class CODaDataset(DatasetTemplate):
         import torch
 
         database_save_path = Path(self.root_path) / ('gt_database' if split == 'train' else ('gt_database_%s' % split))
-        db_info_save_path = Path(self.root_path) / ('custom_dbinfos_%s.pkl' % split)
+        db_info_save_path = Path(self.root_path) / ('coda_dbinfos_%s.pkl' % split)
 
         database_save_path.mkdir(parents=True, exist_ok=True)
         all_db_infos = {}
@@ -231,16 +250,17 @@ class CODaDataset(DatasetTemplate):
                 f.write(line)
 
 
-def create_custom_infos(dataset_cfg, class_names, data_path, save_path, workers=4):
-    dataset = CODaDataset(
+def create_coda_infos(dataset_cfg, class_names, data_path, save_path, workers=4):
+    dataset = CODataset(
         dataset_cfg=dataset_cfg, class_names=class_names, root_path=data_path,
         training=False, logger=common_utils.create_logger()
     )
-    train_split, val_split = 'train', 'test'
+    train_split, val_split, test_split = 'train', 'val', 'test'
     num_features = len(dataset_cfg.POINT_FEATURE_ENCODING.src_feature_list)
 
     train_filename = save_path / ('coda_infos_%s.pkl' % train_split)
     val_filename = save_path / ('coda_infos_%s.pkl' % val_split)
+    test_filename = save_path / ('coda_infos_%s.pkl' % test_split)
 
     print('------------------------Start to generate data infos------------------------')
 
@@ -250,7 +270,7 @@ def create_custom_infos(dataset_cfg, class_names, data_path, save_path, workers=
     )
     with open(train_filename, 'wb') as f:
         pickle.dump(custom_infos_train, f)
-    print('Custom info train file is saved to %s' % train_filename)
+    print('CODa info train file is saved to %s' % train_filename)
 
     dataset.set_split(val_split)
     custom_infos_val = dataset.get_infos(
@@ -258,7 +278,15 @@ def create_custom_infos(dataset_cfg, class_names, data_path, save_path, workers=
     )
     with open(val_filename, 'wb') as f:
         pickle.dump(custom_infos_val, f)
-    print('Custom info train file is saved to %s' % val_filename)
+    print('CODa info val file is saved to %s' % val_filename)
+
+    dataset.set_split(test_split)
+    custom_infos_test = dataset.get_infos(
+        class_names, num_workers=workers, has_label=True, num_features=num_features
+    )
+    with open(test_filename, 'wb') as f:
+        pickle.dump(custom_infos_test, f)
+    print('CODa info test file is saved to %s' % test_filename)
 
     print('------------------------Start create groundtruth database for data augmentation------------------------')
     dataset.set_split(train_split)
@@ -276,9 +304,32 @@ if __name__ == '__main__':
 
         dataset_cfg = EasyDict(yaml.safe_load(open(sys.argv[2])))
         ROOT_DIR = (Path(__file__).resolve().parent / '../../../').resolve()
-        create_custom_infos(
+        create_coda_infos(
             dataset_cfg=dataset_cfg,
-            class_names=['Car', 'Person', 'Bike'],
+            class_names= [  
+                "Scooter",
+                "Bike",
+                "Motorcycle",
+                "Vehicle",
+                "Person",
+                "Tree",
+                "Sign",
+                "Canopy",
+                "Traffic Lights",
+                "Bike Rack",
+                "Barrier",
+                "Fire Hydrant",
+                "Plant",
+                "Pole",
+                "Cone",
+                "Chair",
+                "Bench",
+                "Table",
+                "Trash Can",
+                "Dispenser",
+                "Screen",
+                "Other"
+            ],
             data_path=ROOT_DIR / 'data' / 'coda',
             save_path=ROOT_DIR / 'data' / 'coda',
         )

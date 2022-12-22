@@ -1,180 +1,229 @@
 import os
 import pdb
 import json
+import shutil
 
 import numpy as np
 import open3d as o3d
 
-def generate_labels(in_root, out_root, trajectories):
-    label_set = {str(traj): [] for traj in trajectories}
-    category_list = ["Car", "Person", "Bike"]
-    category_list_map = {"Car": "Car", "Person": "Pedestrian", "Bike": "Cyclist"}
+CLASS_REMAP = {
+    "Scooter":              "Scooter",
+    "Bike":                 "Bike",
+    "Car":                  "Vehicle",
+    "Motorcycle":           "Motorcycle",
+    "Golf Cart":            "Vehicle",
+    "Truck":                "Vehicle",
+    "Person":               "Person",
+    # Static Classes     
+    "Tree":                 "Tree",
+    "Traffic Sign":         "Sign",
+    "Canopy":               "Canopy",
+    "Traffic Lights":       "Traffic Lights",
+    "Bike Rack":            "Bike Rack",
+    "Bollard":              "Barrier",
+    "Construction Barrier": "Barrier",
+    "Parking Kiosk":        "Dispenser",
+    "Mailbox":              "Dispenser",
+    "Fire Hydrant":         "Fire Hydrant",
+    # Static Class Mixed
+    "Freestanding Plant":   "Plant",
+    "Pole":                 "Pole",
+    "Informational Sign":   "Sign",
+    "Door":                 "Barrier",
+    "Fence":                "Barrier",
+    "Railing":              "Barrier",
+    "Cone":                 "Cone",
+    "Chair":                "Chair",
+    "Bench":                "Bench",
+    "Table":                "Table",
+    "Trash Can":            "Trash Can",
+    "Newspaper Dispenser":  "Dispenser",
+    # Static Classes Indoor
+    "Room Label":           "Sign",
+    "Stanchion":            "Barrier",
+    "Sanitizer Dispenser":  "Dispenser",
+    "Condiment Dispenser":  "Dispenser",
+    "Vending Machine":      "Dispenser",
+    "Emergency Aid Kit":    "Dispenser",
+    "Fire Extinguisher":    "Dispenser",
+    "Computer":             "Screen",
+    "Television":           "Screen",
+    "Other":                "Other"
+}
 
+def generate_labels(in_root, out_root, trajectories, use_custom=False):
     for traj in trajectories:
         print("Generating labels for trajectory %d"%traj)
-        subdir = os.path.join("3d_label", "os1", str(traj))
-        trajdir= os.path.join(in_root, subdir)
-        assert os.path.isdir(trajdir), '%s does not exist' % trajdir
-        
-        cust_file_dir   = os.path.join(out_root, "labels")
-        if not os.path.exists(cust_file_dir):
-            print("Creating new output label dir at %s"%cust_file_dir)
-            os.makedirs(cust_file_dir)
+        meta_path = os.path.join(in_root, "metadata", "%s.json"%traj)
+        assert os.path.isfile(meta_path), '%s does not exist' % meta_path
 
-        label_files = [lfile for lfile in sorted(os.listdir(trajdir)) if os.path.isfile(
-            os.path.join(trajdir, lfile) ) ] 
+        meta_json = json.load(open(meta_path, "r"))
+        split_keys = ["train", "val", "test"]
 
-        for label_file in label_files:
-            label_path = os.path.join(trajdir, label_file)
+        for split in split_keys:
+            split_dir = os.path.join(out_root, split, "labels")
+            if not os.path.exists(split_dir):
+                os.makedirs(split_dir)
 
-            label_json = json.load(open(label_path, "r"))
-            label_list = label_json["3dannotations"]
+            split_paths = meta_json["ObjectTracking"][split]
+            for label_subpath in split_paths:
+                label_path = os.path.join(in_root, label_subpath)
 
-            frame = int(label_file.split("_")[-1].split(".")[0])
-            label_set[str(traj)].append(frame)
-            #Create output label file
-            cust_file   = "%06d.txt" % frame
-            cust_path       = os.path.join(cust_file_dir, cust_file)
-            
-            cust_txt    = open(cust_path, "w+")
-            for label in label_list:
-                #Write to output
-                x, y, z     = label["cX"], label['cY'], label['cZ'] - 1.2 # Lower labels by 1.2meters in z
-                dx, dy, dz  = label["l"], label["w"], label["h"]
-                heading     = label["y"]
-                category    = label["classId"]
-                if category not in category_list:
-                    continue
+                label_json = json.load(open(label_path, "r"))
+                label_list = label_json["3dannotations"]
+
+                label_file = label_path.split("/")[-1]
+
+                
+                #Create output label file
+                if use_custom:
+                    cust_file_dir = os.path.join(out_root, "labels")
+                    frame = int(label_file.split("_")[-1].split(".")[0])
+                    cust_file   = "%06d.txt" % frame
+                    cust_path   = os.path.join(cust_file_dir, cust_file)
                 else:
-                    category= category_list_map[category]
-                label_str   = " ".join(map(str, [x, y, z, dx, dy, dz, heading, category]))
-                cust_txt.write(label_str+"\n")
+                    cust_file  = label_file.replace(".json", ".txt")
+                    cust_path  = os.path.join(split_dir, cust_file)
+                
+                cust_txt    = open(cust_path, "w+")
+                for label in label_list:
+                    #Write to output
+                    x, y, z     = label["cX"], label['cY'], label['cZ'] - 1.2 # Lower labels by 1.2meters in z
+                    dx, dy, dz  = label["l"], label["w"], label["h"]
+                    heading     = label["y"]
+                    category    = label["classId"]
 
-            print("Wrote to label file %s, closing..."%cust_path)
-            cust_txt.close()
+                    if use_custom:
+                        category_list = ["Car", "Person", "Bike"]
+                        category_list_map = {"Car": "Car", "Person": "Pedestrian", "Bike": "Cyclist"}
+                        if category not in category_list:
+                            continue
+                        else:
+                            category= category_list_map[category]
+                    else:
+                        category = CLASS_REMAP[category]
+                    label_str   = " ".join(map(str, [x, y, z, dx, dy, dz, heading, category]))
+                    cust_txt.write(label_str+"\n")
 
-    return label_set
+                print("Wrote to label file %s, closing..."%cust_path)
+                cust_txt.close()
 
-def generate_points(in_root, out_root, trajectories, label_set):
-
+def generate_points(in_root, out_root, trajectories, use_custom=False):
     for traj in trajectories:
-        print("Generating points for trajectory %d"%traj)
-        subdir = os.path.join("3d_raw", "os1", str(traj))
-        trajdir= os.path.join(in_root, subdir)
-        assert os.path.isdir(trajdir), '%s does not exist' % trajdir
-        
-        npy_file_dir = os.path.join(out_root, "points")
-        if not os.path.exists(npy_file_dir):
-            print("Creating new output points dir at %s"%npy_file_dir)
-            os.makedirs(npy_file_dir)
+        print("Generating labels for trajectory %d"%traj)
+        meta_path = os.path.join(in_root, "metadata", "%s.json"%traj)
+        assert os.path.isfile(meta_path), '%s does not exist' % meta_path
 
-        bin_files = [lfile for lfile in sorted(os.listdir(trajdir)) if os.path.isfile(
-            os.path.join(trajdir, lfile) ) ]
+        meta_json = json.load(open(meta_path, "r"))
+        split_keys = ["train", "val", "test"]
 
-        for bin_file in bin_files:
-            frame = int(bin_file.split("_")[-1].split(".")[0])
-            if frame not in label_set[str(traj)]:
-                continue
-            #Convert .bin to .npy
-            bin_path = os.path.join(trajdir, bin_file)
-            pc_np   = np.fromfile(bin_path, dtype=np.float32).reshape(-1, 4)
+        for split in split_keys:
+            split_dir = os.path.join(out_root, split, "os1")
+            if not os.path.exists(split_dir):
+                os.makedirs(split_dir)
 
-            #Downsample from 128 to 64 channels
-            pc_ds_np    = pc_np[:, :4].reshape(1024, 128, 4)
-            pc_ds_np    = pc_ds_np[:, np.arange(0, 128, 2), :]
-            pc_intensity= pc_ds_np[:, :, -1].reshape(-1, 1)
-            pc_ds_np    = pc_ds_np[:, :, :3].reshape(-1, 3)
+            split_paths = meta_json["ObjectTracking"][split]
+            for label_subpath in split_paths:
+                label_path = os.path.join(in_root, label_subpath)
+                bin_path = label_path.replace("label", "raw").replace(".json", ".bin")
 
-            #Filter out points in same FOV Velodyne
-            pc_dist     = np.linalg.norm(pc_ds_np[:, :3], axis=1)
-            zero_mask   = pc_dist!=0
-            pc_ds_np    = pc_ds_np[zero_mask]
-            pc_intensity= pc_intensity[zero_mask]
+                bin_file = bin_path.split("/")[-1]
+                frame = int(bin_file.split("_")[-1].split(".")[0])
+                #Convert .bin to .npy
+                pc_np   = np.fromfile(bin_path, dtype=np.float32).reshape(-1, 4)
 
-            pc_angle    = np.arcsin(pc_ds_np[:, 2] / pc_dist[zero_mask])
-            fov_mask    = np.abs(pc_angle) <= 0.2338741
-            pc_ds_np    = pc_ds_np[fov_mask, :]
-            pc_intensity= pc_intensity[fov_mask, :]
+                #Downsample from 128 to 64 channels
+                pc_ds_np    = pc_np[:, :4].reshape(1024, 128, 4)
+                pc_ds_np    = pc_ds_np[:, np.arange(0, 128, 2), :]
+                pc_intensity= pc_ds_np[:, :, -1].reshape(-1, 1)
+                pc_ds_np    = pc_ds_np[:, :, :3].reshape(-1, 3)
 
-            #Shift point cloud down to match KITTI
-            pc_ds_np[:, 2] -= 1.2
-            pc_np[:, 2] -= 1.2
+                #Filter out points in same FOV Velodyne
+                pc_dist     = np.linalg.norm(pc_ds_np[:, :3], axis=1)
+                zero_mask   = pc_dist!=0
+                pc_ds_np    = pc_ds_np[zero_mask]
+                pc_intensity= pc_intensity[zero_mask]
 
-            # PCD viewing
-            pcd = o3d.geometry.PointCloud()
-            pcd.points = o3d.utility.Vector3dVector(pc_ds_np)
-            o3d.io.write_point_cloud("/home/arthur/AMRL/tmp/%06d_ds.pcd"%frame, pcd, write_ascii=False)
+                pc_angle    = np.arcsin(pc_ds_np[:, 2] / pc_dist[zero_mask])
+                fov_mask    = np.abs(pc_angle) <= 0.2338741
+                pc_ds_np    = pc_ds_np[fov_mask, :]
+                pc_intensity= pc_intensity[fov_mask, :]
 
-            pcd = o3d.geometry.PointCloud()
-            pcd.points = o3d.utility.Vector3dVector(pc_np[:, :3])
-            o3d.io.write_point_cloud("/home/arthur/AMRL/tmp/%06d.pcd"%frame, pcd, write_ascii=False)
+                #Shift point cloud down to match KITTI
+                pc_ds_np[:, 2] -= 1.2
+                pc_np[:, 2] -= 1.2
 
+                # PCD viewing
+                # pcd = o3d.geometry.PointCloud()
+                # pcd.points = o3d.utility.Vector3dVector(pc_ds_np)
+                # o3d.io.write_point_cloud("/home/arthur/AMRL/tmp/%06d_ds.pcd"%frame, pcd, write_ascii=False)
 
-            npy_file = "%06d.npy"%frame
-            npy_path = os.path.join(npy_file_dir, npy_file)
-            np.save(npy_path, np.hstack( (pc_ds_np, pc_intensity) ))
-            print("Wrote bin to npy format %s..."%npy_path)
+                # pcd = o3d.geometry.PointCloud()
+                # pcd.points = o3d.utility.Vector3dVector(pc_np[:, :3])
+                # o3d.io.write_point_cloud("/home/arthur/AMRL/tmp/%06d.pcd"%frame, pcd, write_ascii=False)
 
-def generate_imagesets(in_root, out_root, trajectories):
+                if use_custom:
+                    npy_file_dir = os.path.join(out_root, "points")
+                    npy_file = "%06d.npy"%frame
+                    npy_path = os.path.join(npy_file_dir, npy_file)
+                else:
+                    npy_file = bin_file.replace(".bin", ".npy")
+                    npy_path = os.path.join(split_dir, npy_file)
+
+                np.save(npy_path, np.hstack( (pc_ds_np, pc_intensity) ))
+                print("Wrote bin to npy format %s..."%npy_path)
+
+def generate_imagesets(in_root, out_root, trajectories, use_custom=False):
     # Delete old ImageSet Files
     imageset_dir = os.path.join(out_root, "ImageSets")
-    if not os.path.exists(imageset_dir):
-        print("ImageSet directory does not exist at %s, creating..."%imageset_dir)
-        os.makedirs(imageset_dir)
-    train_path  = os.path.join(imageset_dir, "train.txt")
-    val_path    = os.path.join(imageset_dir, "val.txt")
-    test_path   = os.path.join(imageset_dir, "test.txt")
-    train_file  = open(train_path, "w+")
-    val_file    = open(val_path, "w+")
-    test_file   = open(test_path, "w+")
+    
+    if os.path.exists(imageset_dir):
+        shutil.rmtree(imageset_dir)
+        print("Removed existing imageset directory at %s, rebuilding..."%imageset_dir)
+    os.makedirs(imageset_dir)
 
-    # Create New ImageSet Files
     for traj in trajectories:
         print("Generating imagesets for trajectory %d"%traj)
-        subdir = os.path.join("3d_label", "os1", str(traj))
-        trajdir= os.path.join(in_root, subdir)
-        assert os.path.isdir(trajdir), '%s does not exist' % trajdir
-        
-        label_files = [lfile for lfile in sorted(os.listdir(trajdir)) if os.path.isfile(
-            os.path.join(trajdir, lfile) ) ] 
+        meta_path = os.path.join(in_root, "metadata", "%s.json"%traj)
+        assert os.path.isfile(meta_path), '%s does not exist' % meta_path
 
-        # Allocate first 60%train  20%validation 20%test
-        num_train   = int(len(label_files)*0.8)
-        num_val     = int(len(label_files)*0.2) # Use val
-        num_test    = len(label_files) - num_train - num_val
+        meta_json = json.load(open(meta_path, "r"))
+        split_keys = ["train", "val", "test"]
 
-        # Generate train and val sets
-        for (idx, label_file) in enumerate(label_files):
-            frame = int(label_file.split("_")[-1].split(".")[0])
-            frame_str = "%06d\n"%frame
+        for split in split_keys:
+            split_dir = os.path.join(out_root, split, "os1")
+            if not os.path.exists(split_dir):
+                os.makedirs(split_dir)
 
-            if idx < num_train:
-                train_file.write(frame_str)
-            elif idx < (num_train+num_val):
-                val_file.write(frame_str)
-            else:
-                test_file.write(frame_str)
+            imageset_path = os.path.join(imageset_dir, "%s.txt"%split)
+            imageset_file = open(imageset_path, "a")
+            split_paths = meta_json["ObjectTracking"][split]
+            for label_subpath in split_paths:
+                label_path = os.path.join(in_root, label_subpath)
 
-    train_file.close()
-    val_file.close()
-    test_file.close()
+                label_file = label_path.split("/")[-1]
+                label_prefix = label_file.split(".")[0]
+
+                imageset_file.write(label_prefix+'\n')
+
+            imageset_file.close()
 
 def main():
     DATASET_ROOT = "/home/arthur/AMRL/Datasets/CODa"
-    DATASET_OUT = "/home/arthur/AMRL/Benchmarks/OpenPCDet/data/custom"
+    DATASET_OUT = "/home/arthur/AMRL/Benchmarks/OpenPCDet/data/coda"
     # DATASET_ROOT = "/robodata/arthurz/CODa"
     # DATASET_OUT = "/home/arthur//Benchmarks/OpenPCDet/data/custom"
-    TRAJECTORIES    = [2, 3]
+    TRAJECTORIES    = [0, 2, 3]
 
     # File Checking
     assert os.path.isdir(DATASET_ROOT), '%s is not a valid dir' % DATASET_ROOT
     assert os.path.isdir(DATASET_OUT), '%s is not a valid dir' % DATASET_OUT
 
     #Generate Label Files
-    label_set = generate_labels(DATASET_ROOT, DATASET_OUT, TRAJECTORIES)
+    generate_labels(DATASET_ROOT, DATASET_OUT, TRAJECTORIES)
 
     #Generate Points Files
-    generate_points(DATASET_ROOT, DATASET_OUT, TRAJECTORIES, label_set)
+    generate_points(DATASET_ROOT, DATASET_OUT, TRAJECTORIES)
 
     #Generate ImageSets
     generate_imagesets(DATASET_ROOT, DATASET_OUT, TRAJECTORIES)

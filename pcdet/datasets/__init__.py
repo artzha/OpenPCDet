@@ -13,7 +13,7 @@ from .pandaset.pandaset_dataset import PandasetDataset
 from .lyft.lyft_dataset import LyftDataset
 from .once.once_dataset import ONCEDataset
 from .custom.custom_dataset import CustomDataset
-from .coda.coda_dataset import CODaDataset
+from .coda.coda_dataset import CODataset
 
 __all__ = {
     'DatasetTemplate': DatasetTemplate,
@@ -24,7 +24,7 @@ __all__ = {
     'LyftDataset': LyftDataset,
     'ONCEDataset': ONCEDataset,
     'CustomDataset': CustomDataset,
-    'CODaDataset': CODaDataset
+    'CODataset': CODataset
 }
 
 

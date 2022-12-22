@@ -40,9 +40,10 @@ class DemoDataset(DatasetTemplate):
 
         data_file_list.sort()
         self.sample_file_list = data_file_list
-        self.label_file_list = [os.path.join(root_path, "labels", file.split("/")[-1]).replace(".npy", ".txt") for file in data_file_list]
+        self.label_file_list = [os.path.join(root_path, "labels", file.split("/")[-1]).replace(ext, ".txt") for file in data_file_list]
 
         self.class_label_map = {"Car": 1, "Pedestrian": 2, "Cyclist": 3}
+        self.label_class_map = {1:"Car", 2:"Pedestrian", 3: "Cyclist"}
 
     def __len__(self):
         return len(self.sample_file_list)
@@ -55,12 +56,19 @@ class DemoDataset(DatasetTemplate):
         else:
             raise NotImplementedError
 
-        
         gt_boxes = np.loadtxt(self.label_file_list[index], dtype=np.float32, usecols=(0, 1, 2, 3, 4, 5, 6))
         gt_labels  = np.loadtxt(self.label_file_list[index], dtype=str, usecols=(7))
 
+        convert_to_label = False
+        for label in gt_labels:
+            if label in self.class_label_map:
+                convert_to_label = True
+                break
+        if not convert_to_label:
+            print("Detected labels are floats, converting to class labels...")
+            gt_labels = np.array([self.label_class_map[int(float(label))] for label in gt_labels if int(float(label)) in self.label_class_map])
+
         # Added for KITTI offset
-        # points[:, 2] -= 1.2
         input_dict = {
             'points': points,
             'frame_id': index,
@@ -69,7 +77,8 @@ class DemoDataset(DatasetTemplate):
         }
 
         data_dict = self.prepare_data(data_dict=input_dict)
-        data_dict['gt_labels'] = [self.class_label_map[label] for label in gt_labels]
+        data_dict['gt_labels'] = [label in self.class_label_map if label in self.class_label_map else int(float(label)) for label in gt_labels ]
+
         return data_dict
 
 

@@ -7,9 +7,22 @@ class PVRCNN(Detector3DTemplate):
         self.module_list = self.build_networks()
 
     def forward(self, batch_dict):
+        # import pdb; pdb.set_trace()
+        # dump points and bounding boxes for visualization, note the input is actually the voxels
+        # pc_np = batch_dict['points'].detach().cpu().numpy()[:, 1:]
+        # labels= batch_dict['gt_boxes'][0].detach().cpu().numpy()
+        # import os
+        # import numpy as np
+        # root_path = os.path.join('/home/arthur/AMRL/Benchmarks/test/PVRCNN_train')
+        # pc_path = os.path.join(root_path, "points", "%s.npy"%batch_dict['frame_id'][0])
+        # label_path = os.path.join(root_path, "labels", "%s.txt"%batch_dict['frame_id'][0])
+        # print("Wrote to file %s and %s" % (pc_path, label_path))
+        # np.save(pc_path, pc_np)
+        # np.savetxt(label_path, labels, fmt="%6.16f", delimiter=" ")
+        # import pdb; pdb.set_trace()
         for cur_module in self.module_list:
             batch_dict = cur_module(batch_dict)
-
+        
         if self.training:
             loss, tb_dict, disp_dict = self.get_training_loss()
 
