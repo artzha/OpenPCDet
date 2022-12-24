@@ -4,7 +4,7 @@ import numba
 import numpy as np
 
 from .rotate_iou import rotate_iou_gpu_eval
-
+from ....utils import common_utils
 
 @numba.jit
 def get_thresholds(scores: np.ndarray, num_gt, num_sample_pts=41):
@@ -28,7 +28,7 @@ def get_thresholds(scores: np.ndarray, num_gt, num_sample_pts=41):
 
 
 def clean_data(gt_anno, dt_anno, current_class, difficulty):
-    CLASS_NAMES = ['car', 'pedestrian', 'cyclist', 'van', 'person_sitting', 'truck']
+    CLASS_NAMES = common_utils.CODA_CLASSES #['car', 'pedestrian', 'cyclist', 'van', 'person_sitting', 'truck']
     MIN_HEIGHT = [40, 25, 25]
     MAX_OCCLUSION = [0, 1, 2]
     MAX_TRUNCATION = [0.15, 0.3, 0.5]
@@ -644,30 +644,9 @@ def get_official_eval_result(gt_annos, dt_annos, current_classes, PR_detail_dict
                              0.5, 0.5], [0.5, 0.25, 0.25, 0.5, 0.25, 0.5],
                             [0.5, 0.25, 0.25, 0.5, 0.25, 0.5]])
     min_overlaps = np.stack([overlap_0_7, overlap_0_5], axis=0)  # [2, 3, 5]
-    class_to_name = {  
-        0: "Scooter",
-        1: "Bike",
-        2: "Motorcycle",
-        3: "Vehicle",
-        4: "Person",
-        5: "Tree",
-        6: "Sign",
-        7: "Canopy",
-        8: "Traffic Lights",
-        9: "Bike Rack",
-        10: "Barrier",
-        11: "Fire Hydrant",
-        12: "Plant",
-        13: "Pole",
-        14: "Cone",
-        15: "Chair",
-        16: "Bench",
-        17: "Table",
-        18: "Trash Can",
-        19: "Dispenser",
-        20: "Screen",
-        21: "Other"
-    }
+    coda_classes = common_utils.CODA_CLASSES
+    class_to_name = {idx: obj_class for idx, obj_class in common_utils.CODA_CLASSES}
+    
     name_to_class = {v: n for n, v in class_to_name.items()}
     if not isinstance(current_classes, (list, tuple)):
         current_classes = [current_classes]

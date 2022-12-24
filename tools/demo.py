@@ -41,10 +41,15 @@ class DemoDataset(DatasetTemplate):
         self.sample_file_list = data_file_list
         # import os
         # import pdb; pdb.set_trace()
-        self.label_file_list = glob.glob(str(root_path / f'*{self.ext}')) if self.root_path.is_dir() else [str(self.root_path).replace("points", "labels").replace(ext, ".txt")]
+        self.label_file_list = glob.glob(str(root_path / f'*{self.ext}')) if self.root_path.is_dir() else [str(self.root_path).replace("os1", "labels", 1).replace("raw", "label").replace(ext, ".txt")]
 
-        self.class_label_map = {"Car": 1, "Pedestrian": 2, "Cyclist": 3}
-        self.label_class_map = {1:"Car", 2:"Pedestrian", 3: "Cyclist"}
+        # self.class_label_map = {"Car": 1, "Pedestrian": 2, "Cyclist": 3}
+        # self.label_class_map = {1:"Car", 2:"Pedestrian", 3: "Cyclist"}
+
+        classes = common_utils.CODA_CLASSES
+
+        self.class_label_map = {obj_class: idx for idx, obj_class in enumerate(classes)}
+        self.label_class_map = {idx: obj_class for idx, obj_class in enumerate(classes)}
 
     def __len__(self):
         return len(self.sample_file_list)

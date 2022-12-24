@@ -9,7 +9,6 @@ from ...utils import box_utils, common_utils
 from ..dataset import DatasetTemplate
 
 
-
 class CODataset(DatasetTemplate):
     def __init__(self, dataset_cfg, class_names, training=True, root_path=None, logger=None):
         """
@@ -302,30 +301,7 @@ if __name__ == '__main__':
         ROOT_DIR = (Path(__file__).resolve().parent / '../../../').resolve()
         create_coda_infos(
             dataset_cfg=dataset_cfg,
-            class_names= [  
-                "Scooter",
-                "Bike",
-                "Motorcycle",
-                "Vehicle",
-                "Person",
-                "Tree",
-                "Sign",
-                "Canopy",
-                "Traffic Lights",
-                "Bike Rack",
-                "Barrier",
-                "Fire Hydrant",
-                "Plant",
-                "Pole",
-                "Cone",
-                "Chair",
-                "Bench",
-                "Table",
-                "Trash Can",
-                "Dispenser",
-                "Screen",
-                "Other"
-            ],
+            class_names= common_utils.CODA_CLASSES,
             data_path=ROOT_DIR / 'data' / 'coda',
             save_path=ROOT_DIR / 'data' / 'coda',
         )

@@ -213,7 +213,7 @@ def main():
     DATASET_OUT = "/home/arthur/AMRL/Benchmarks/OpenPCDet/data/coda"
     # DATASET_ROOT = "/robodata/arthurz/CODa"
     # DATASET_OUT = "/home/arthur//Benchmarks/OpenPCDet/data/custom"
-    TRAJECTORIES    = [0, 2, 3]
+    TRAJECTORIES    = [2, 3]
 
     # File Checking
     assert os.path.isdir(DATASET_ROOT), '%s is not a valid dir' % DATASET_ROOT

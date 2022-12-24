@@ -11,6 +11,29 @@ import torch
 import torch.distributed as dist
 import torch.multiprocessing as mp
 
+CODA_CLASSES = [
+    # 'Scooter',
+    'Bike',
+    # 'Motorcycle', 
+    'Vehicle', 
+    'Person', 
+    'Tree', 
+    # 'Sign', 
+    # 'Canopy', 
+    # 'Traffic Lights', 
+    # 'Bike Rack', 
+    # 'Barrier', 
+    # 'Fire Hydrant', 
+    # 'Plant', 
+    'Pole', 
+    # 'Cone', 
+    'Chair', 
+    # 'Bench', 
+    'Table', 
+    # 'Trash Can', 
+    # 'Dispenser', 
+    # 'Screen', 
+    'Other' ]
 
 def check_numpy_to_torch(x):
     if isinstance(x, np.ndarray):
