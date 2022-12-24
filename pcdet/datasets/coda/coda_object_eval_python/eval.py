@@ -647,7 +647,7 @@ def get_official_eval_result(gt_annos, dt_annos, current_classes, PR_detail_dict
                             [0.3, 0.3, 0.5, 0.3, 0.5, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.5, 0.5, 0.3]])
     min_overlaps = np.stack([overlap_0_7, overlap_0_5], axis=0)  # [2, 3, 5]
     coda_classes = common_utils.CODA_CLASSES
-    class_to_name = {idx: obj_class for idx, obj_class in common_utils.CODA_CLASSES}
+    class_to_name = {idx: obj_class for idx, obj_class in enumerate(common_utils.CODA_CLASSES)}
     
     name_to_class = {v: n for n, v in class_to_name.items()}
     if not isinstance(current_classes, (list, tuple)):
