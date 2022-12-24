@@ -28,7 +28,30 @@ def get_thresholds(scores: np.ndarray, num_gt, num_sample_pts=41):
 
 
 def clean_data(gt_anno, dt_anno, current_class, difficulty):
-    CLASS_NAMES = ['car', 'pedestrian', 'cyclist', 'van', 'person_sitting', 'truck']
+    CLASS_NAMES = [  
+        "Scooter",
+        "Bike",
+        # "Motorcycle",
+        "Vehicle",
+        "Person",
+        "Tree",
+        "Sign",
+        # "Canopy",
+        # "Traffic Lights",
+        "Bike Rack",
+         "Barrier",
+        #  "Fire Hydrant",
+        #  "Plant",
+         "Pole",
+        #  "Cone",
+         "Chair",
+         "Bench",
+         "Table",
+         "Trash Can",
+         "Dispenser",
+        #  "Screen",
+         "Other"
+    ]
     MIN_HEIGHT = [40, 25, 25]
     MAX_OCCLUSION = [0, 1, 2]
     MAX_TRUNCATION = [0.15, 0.3, 0.5]
@@ -441,6 +464,7 @@ def _prepare_data(gt_annos, dt_annos, current_class, difficulty):
         gt_datas_list.append(gt_datas)
         dt_datas_list.append(dt_datas)
     total_dc_num = np.stack(total_dc_num, axis=0)
+
     return (gt_datas_list, dt_datas_list, ignored_gts, ignored_dets, dontcares,
             total_dc_num, total_num_valid_gt)
 
@@ -453,7 +477,7 @@ def eval_class(gt_annos,
                min_overlaps,
                compute_aos=False,
                num_parts=100):
-    """Kitti eval. support 2d/bev/3d/aos eval. support 0.5:0.05:0.95 coco AP.
+    """KITTI eval. support 2d/bev/3d/aos eval. support 0.5:0.05:0.95 coco AP.
     Args:
         gt_annos: dict, must from get_label_annos() in kitti_common.py
         dt_annos: dict, must from get_label_annos() in kitti_common.py
@@ -637,37 +661,39 @@ def do_coco_style_eval(gt_annos, dt_annos, current_classes, overlap_ranges,
 
 
 def get_official_eval_result(gt_annos, dt_annos, current_classes, PR_detail_dict=None):
-    overlap_0_7 = np.array([[0.7, 0.5, 0.5, 0.7,
-                             0.5, 0.7], [0.7, 0.5, 0.5, 0.7, 0.5, 0.7],
-                            [0.7, 0.5, 0.5, 0.7, 0.5, 0.7]])
-    overlap_0_5 = np.array([[0.7, 0.5, 0.5, 0.7,
-                             0.5, 0.5], [0.5, 0.25, 0.25, 0.5, 0.25, 0.5],
-                            [0.5, 0.25, 0.25, 0.5, 0.25, 0.5]])
+    overlap_0_7 = np.array([[0.5, 0.5, 0.7, 0.5, 0.7, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.7, 0.7, 0.5], 
+                            [0.5, 0.5, 0.7, 0.5, 0.7, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.7, 0.7, 0.5],
+                            [0.5, 0.5, 0.7, 0.5, 0.7, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.7, 0.7, 0.5]
+                            ])
+    overlap_0_5 = np.array([[0.3, 0.3, 0.5, 0.3, 0.5, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.5, 0.5, 0.3], 
+                            [0.3, 0.3, 0.5, 0.3, 0.5, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.5, 0.5, 0.3],
+                            [0.3, 0.3, 0.5, 0.3, 0.5, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.5, 0.5, 0.3]])
     min_overlaps = np.stack([overlap_0_7, overlap_0_5], axis=0)  # [2, 3, 5]
-    class_to_name = {  
-        0: "Scooter",
-        1: "Bike",
-        2: "Motorcycle",
-        3: "Vehicle",
-        4: "Person",
-        5: "Tree",
-        6: "Sign",
-        7: "Canopy",
-        8: "Traffic Lights",
-        9: "Bike Rack",
-        10: "Barrier",
-        11: "Fire Hydrant",
-        12: "Plant",
-        13: "Pole",
-        14: "Cone",
-        15: "Chair",
-        16: "Bench",
-        17: "Table",
-        18: "Trash Can",
-        19: "Dispenser",
-        20: "Screen",
-        21: "Other"
-    }
+    class_to_name = [  
+        "Scooter",
+        "Bike",
+        # "Motorcycle",
+        "Vehicle",
+        "Person",
+        "Tree",
+        "Sign",
+        # "Canopy",
+        # "Traffic Lights",
+        "Bike Rack",
+         "Barrier",
+        #  "Fire Hydrant",
+        #  "Plant",
+         "Pole",
+        #  "Cone",
+         "Chair",
+         "Bench",
+         "Table",
+         "Trash Can",
+         "Dispenser",
+        #  "Screen",
+         "Other"
+    ]
+    class_to_name = {idx:obj_class for idx, obj_class in enumerate(class_to_name)}
     name_to_class = {v: n for n, v in class_to_name.items()}
     if not isinstance(current_classes, (list, tuple)):
         current_classes = [current_classes]
@@ -760,65 +786,3 @@ def get_official_eval_result(gt_annos, dt_annos, current_classes, PR_detail_dict
                 ret_dict['%s_image/hard_R40' % class_to_name[curcls]] = mAPbbox_R40[j, 2, 0]
 
     return result, ret_dict
-
-
-def get_coco_eval_result(gt_annos, dt_annos, current_classes):
-    class_to_name = {
-        0: 'Car',
-        1: 'Pedestrian',
-        2: 'Cyclist',
-        3: 'Van',
-        4: 'Person_sitting',
-    }
-    class_to_range = {
-        0: [0.5, 0.95, 10],
-        1: [0.25, 0.7, 10],
-        2: [0.25, 0.7, 10],
-        3: [0.5, 0.95, 10],
-        4: [0.25, 0.7, 10],
-    }
-    name_to_class = {v: n for n, v in class_to_name.items()}
-    if not isinstance(current_classes, (list, tuple)):
-        current_classes = [current_classes]
-    current_classes_int = []
-    for curcls in current_classes:
-        if isinstance(curcls, str):
-            current_classes_int.append(name_to_class[curcls])
-        else:
-            current_classes_int.append(curcls)
-    current_classes = current_classes_int
-    overlap_ranges = np.zeros([3, 3, len(current_classes)])
-    for i, curcls in enumerate(current_classes):
-        overlap_ranges[:, :, i] = np.array(
-            class_to_range[curcls])[:, np.newaxis]
-    result = ''
-    # check whether alpha is valid
-    compute_aos = False
-    for anno in dt_annos:
-        if anno['alpha'].shape[0] != 0:
-            if anno['alpha'][0] != -10:
-                compute_aos = True
-            break
-    mAPbbox, mAPbev, mAP3d, mAPaos = do_coco_style_eval(
-        gt_annos, dt_annos, current_classes, overlap_ranges, compute_aos)
-    for j, curcls in enumerate(current_classes):
-        # mAP threshold array: [num_minoverlap, metric, class]
-        # mAP result: [num_class, num_diff, num_minoverlap]
-        o_range = np.array(class_to_range[curcls])[[0, 2, 1]]
-        o_range[1] = (o_range[2] - o_range[0]) / (o_range[1] - 1)
-        result += print_str((f"{class_to_name[curcls]} "
-                             "coco AP@{:.2f}:{:.2f}:{:.2f}:".format(*o_range)))
-        result += print_str((f"bbox AP:{mAPbbox[j, 0]:.2f}, "
-                             f"{mAPbbox[j, 1]:.2f}, "
-                             f"{mAPbbox[j, 2]:.2f}"))
-        result += print_str((f"bev  AP:{mAPbev[j, 0]:.2f}, "
-                             f"{mAPbev[j, 1]:.2f}, "
-                             f"{mAPbev[j, 2]:.2f}"))
-        result += print_str((f"3d   AP:{mAP3d[j, 0]:.2f}, "
-                             f"{mAP3d[j, 1]:.2f}, "
-                             f"{mAP3d[j, 2]:.2f}"))
-        if compute_aos:
-            result += print_str((f"aos  AP:{mAPaos[j, 0]:.2f}, "
-                                 f"{mAPaos[j, 1]:.2f}, "
-                                 f"{mAPaos[j, 2]:.2f}"))
-    return result

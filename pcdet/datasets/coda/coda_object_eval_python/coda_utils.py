@@ -1,6 +1,7 @@
 import numpy as np
+from ...utils import box_utils
 
-def transform_annotations_to_coda_format(annos, map_name_to_coda=None):
+def transform_annotations_to_coda_format(annos, map_name_to_coda=None, info_with_fakelidar=False):
     """
     Args:
         annos:
@@ -16,7 +17,7 @@ def transform_annotations_to_coda_format(annos, map_name_to_coda=None):
             anno.pop('gt_names')
 
         for k in range(anno['name'].shape[0]):
-            anno['name'][k] = map_name_to_kitti[anno['name'][k]]
+            anno['name'][k] = map_name_to_coda[anno['name'][k]]
 
         anno['bbox'] = np.zeros((len(anno['name']), 4))
         anno['bbox'][:, 2:4] = 50  # [0, 0, 50, 50]
@@ -28,6 +29,9 @@ def transform_annotations_to_coda_format(annos, map_name_to_coda=None):
             gt_boxes_lidar = anno['gt_boxes_lidar'].copy()
 
         if len(gt_boxes_lidar) > 0:
+            if info_with_fakelidar:
+                gt_boxes_lidar = box_utils.boxes3d_kitti_fakelidar_to_lidar(gt_boxes_lidar)
+
             gt_boxes_lidar[:, 2] -= gt_boxes_lidar[:, 5] / 2
             anno['location'] = np.zeros((gt_boxes_lidar.shape[0], 3))
             anno['location'][:, 0] = -gt_boxes_lidar[:, 1]  # x = -y_lidar

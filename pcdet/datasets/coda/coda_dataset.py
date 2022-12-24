@@ -44,6 +44,7 @@ class CODataset(DatasetTemplate):
 
         for info_path in self.dataset_cfg.INFO_PATH[mode]:
             info_path = self.root_path / info_path
+
             if not info_path.exists():
                 continue
             with open(info_path, 'rb') as f:
@@ -149,7 +150,7 @@ class CODataset(DatasetTemplate):
         eval_gt_annos = [copy.deepcopy(info['annos']) for info in self.custom_infos]
 
         if kwargs['eval_metric'] == 'coda':
-            ap_result_str, ap_dict = kitti_eval(eval_det_annos, eval_gt_annos, self.map_class_to_coda)
+            ap_result_str, ap_dict = coda_eval(eval_det_annos, eval_gt_annos, self.map_class_to_coda)
         else:
             raise NotImplementedError
 
