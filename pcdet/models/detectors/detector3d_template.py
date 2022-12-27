@@ -352,6 +352,7 @@ class Detector3DTemplate(nn.Module):
                 # logger.info('Update weight %s: %s' % (key, str(val.shape)))
 
         if strict and ('LOAD_DENSE_HEAD_WEIGHTS' not in self.model_cfg['DENSE_HEAD'] or self.model_cfg['DENSE_HEAD']['LOAD_DENSE_HEAD_WEIGHTS']):
+            print("Loading strict state")
             self.load_state_dict(update_model_state)
         else:
             state_dict.update(update_model_state)
@@ -393,20 +394,22 @@ class Detector3DTemplate(nn.Module):
         loc_type = torch.device('cpu') if to_cpu else None
         checkpoint = torch.load(filename, map_location=loc_type)
 
-        if 'LOAD_DENSE_HEAD_WEIGHTS' in self.model_cfg['DENSE_HEAD'] and self.model_cfg['DENSE_HEAD']['LOAD_DENSE_HEAD_WEIGHTS']:
+        if 'LOAD_DENSE_HEAD_WEIGHTS' in self.model_cfg['DENSE_HEAD'] and not self.model_cfg['DENSE_HEAD']['LOAD_DENSE_HEAD_WEIGHTS']:
+            print("Removing dense head weights")
             # Remove all keys associated with dense head
-            for key in checkpoint['model_state'].keys():
+            model_state_keys = checkpoint['model_state'].keys()
+            for key in model_state_keys:
                 if "dense_head" in key:
                     checkpoint['model_state'].pop(key)
-            import pdb; pdb.set_trace()
-            pass
+
         epoch = checkpoint.get('epoch', -1)
         it = checkpoint.get('it', 0.0)
 
         self._load_state_dict(checkpoint['model_state'], strict=True)
 
         if optimizer is not None:
-            if 'optimizer_state' in checkpoint and checkpoint['optimizer_state'] is not None:
+            if 'optimizer_state' in checkpoint and checkpoint['optimizer_state'] is not None and\
+                self.model_cfg['DENSE_HEAD']['LOAD_DENSE_HEAD_WEIGHTS']:
                 logger.info('==> Loading optimizer parameters from checkpoint %s to %s'
                             % (filename, 'CPU' if to_cpu else 'GPU'))
                 optimizer.load_state_dict(checkpoint['optimizer_state'])
