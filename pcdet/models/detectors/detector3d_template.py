@@ -9,7 +9,7 @@ from .. import backbones_2d, backbones_3d, dense_heads, roi_heads
 from ..backbones_2d import map_to_bev
 from ..backbones_3d import pfe, vfe
 from ..model_utils import model_nms_utils
-
+import copy
 
 class Detector3DTemplate(nn.Module):
     def __init__(self, model_cfg, num_class, dataset):
@@ -351,7 +351,7 @@ class Detector3DTemplate(nn.Module):
                 update_model_state[key] = val
                 # logger.info('Update weight %s: %s' % (key, str(val.shape)))
 
-        if strict:
+        if strict and ('LOAD_DENSE_HEAD_WEIGHTS' not in self.model_cfg['DENSE_HEAD'] or self.model_cfg['DENSE_HEAD']['LOAD_DENSE_HEAD_WEIGHTS']):
             self.load_state_dict(update_model_state)
         else:
             state_dict.update(update_model_state)
@@ -365,10 +365,11 @@ class Detector3DTemplate(nn.Module):
         logger.info('==> Loading parameters from checkpoint %s to %s' % (filename, 'CPU' if to_cpu else 'GPU'))
         loc_type = torch.device('cpu') if to_cpu else None
         checkpoint = torch.load(filename, map_location=loc_type)
+
         model_state_disk = checkpoint['model_state']
         if not pre_trained_path is None:
             pretrain_checkpoint = torch.load(pre_trained_path, map_location=loc_type)
-            import pdb; pdb.set_trace()
+
             pretrain_model_state_disk = pretrain_checkpoint['model_state']
             model_state_disk.update(pretrain_model_state_disk)
             
@@ -391,6 +392,14 @@ class Detector3DTemplate(nn.Module):
         logger.info('==> Loading parameters from checkpoint %s to %s' % (filename, 'CPU' if to_cpu else 'GPU'))
         loc_type = torch.device('cpu') if to_cpu else None
         checkpoint = torch.load(filename, map_location=loc_type)
+
+        if 'LOAD_DENSE_HEAD_WEIGHTS' in self.model_cfg['DENSE_HEAD'] and self.model_cfg['DENSE_HEAD']['LOAD_DENSE_HEAD_WEIGHTS']:
+            # Remove all keys associated with dense head
+            for key in checkpoint['model_state'].keys():
+                if "dense_head" in key:
+                    checkpoint['model_state'].pop(key)
+            import pdb; pdb.set_trace()
+            pass
         epoch = checkpoint.get('epoch', -1)
         it = checkpoint.get('it', 0.0)
 
