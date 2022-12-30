@@ -303,6 +303,6 @@ if __name__ == '__main__':
         create_coda_infos(
             dataset_cfg=dataset_cfg,
             class_names= common_utils.CODA_CLASSES,
-            data_path=ROOT_DIR / 'data' / 'coda',
-            save_path=ROOT_DIR / 'data' / 'coda',
+            data_path=ROOT_DIR / 'data' / '64_channel' / 'coda',
+            save_path=ROOT_DIR / 'data' / '64_channel' / 'coda',
         )

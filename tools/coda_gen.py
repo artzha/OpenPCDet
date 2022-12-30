@@ -2,6 +2,7 @@ import os
 import pdb
 import json
 import shutil
+import argparse
 
 import numpy as np
 import open3d as o3d
@@ -50,6 +51,10 @@ CLASS_REMAP = {
     "Television":           "Screen",
     "Other":                "Other"
 }
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--channels', default=128,
+                    help="number of vertical lidar channels to use")
 
 def generate_labels(in_root, out_root, trajectories, use_custom=False):
     for traj in trajectories:
@@ -108,7 +113,7 @@ def generate_labels(in_root, out_root, trajectories, use_custom=False):
                 print("Wrote to label file %s, closing..."%cust_path)
                 cust_txt.close()
 
-def generate_points(in_root, out_root, trajectories, use_custom=False):
+def generate_points(in_root, out_root, trajectories, args, use_custom=False):
     for traj in trajectories:
         print("Generating labels for trajectory %d"%traj)
         meta_path = os.path.join(in_root, "metadata", "%s.json"%traj)
@@ -133,8 +138,9 @@ def generate_points(in_root, out_root, trajectories, use_custom=False):
                 pc_np   = np.fromfile(bin_path, dtype=np.float32).reshape(-1, 4)
 
                 #Downsample from 128 to 64 channels
+                vert_ds = 128 // int(args.channels)
                 pc_ds_np    = pc_np[:, :4].reshape(1024, 128, 4)
-                pc_ds_np    = pc_ds_np[:, np.arange(0, 128, 2), :]
+                pc_ds_np    = pc_ds_np[:, np.arange(0, 128, vert_ds), :]
                 pc_intensity= pc_ds_np[:, :, -1].reshape(-1, 1)
                 pc_ds_np    = pc_ds_np[:, :, :3].reshape(-1, 3)
 
@@ -208,26 +214,32 @@ def generate_imagesets(in_root, out_root, trajectories, use_custom=False):
 
             imageset_file.close()
 
-def main():
-    DATASET_ROOT = "/home/arthur/AMRL/Datasets/CODa"
-    DATASET_OUT = "/home/arthur/AMRL/Benchmarks/OpenPCDet/data/coda"
+def main(args):
+    DATASET_ROOT = "/robodata/CODa"
+    DATASET_OUT = "/home/arthurz/Benchmarks/OpenPCDet/data/%s_channel/coda" % str(args.channels)
+    if int(args.channels) < 16 or int(args.channels) > 128:
+        print("Number of args %s is out of range, exiting..." % str(args.channels))
+        exit(0)
     # DATASET_ROOT = "/robodata/arthurz/CODa"
-    # DATASET_OUT = "/home/arthur//Benchmarks/OpenPCDet/data/custom"
+    # DATASET_OUT = "/home/arthur/Benchmarks/OpenPCDet/data/custom"
     TRAJECTORIES    = [2, 3]
 
     # File Checking
     assert os.path.isdir(DATASET_ROOT), '%s is not a valid dir' % DATASET_ROOT
-    assert os.path.isdir(DATASET_OUT), '%s is not a valid dir' % DATASET_OUT
+    if not os.path.exists(DATASET_OUT):
+        print("Dataset out dir %s does not exist, creating now..." % DATASET_OUT)
+        os.makedirs(DATASET_OUT)
 
     #Generate Label Files
     generate_labels(DATASET_ROOT, DATASET_OUT, TRAJECTORIES)
 
     #Generate Points Files
-    generate_points(DATASET_ROOT, DATASET_OUT, TRAJECTORIES)
+    generate_points(DATASET_ROOT, DATASET_OUT, TRAJECTORIES, args)
 
     #Generate ImageSets
     generate_imagesets(DATASET_ROOT, DATASET_OUT, TRAJECTORIES)
 
 
 if __name__ == '__main__':
-    main()
+    args = parser.parse_args()
+    main(args)
