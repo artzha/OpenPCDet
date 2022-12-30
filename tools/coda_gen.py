@@ -75,7 +75,7 @@ def generate_labels(in_root, out_root, trajectories, use_custom=False):
                 label_path = os.path.join(in_root, label_subpath)
 
                 label_json = json.load(open(label_path, "r"))
-                label_list = label_json["3dannotations"]
+                label_list = label_json["3dbbox"]
 
                 label_file = label_path.split("/")[-1]
 
@@ -130,7 +130,7 @@ def generate_points(in_root, out_root, trajectories, args, use_custom=False):
             split_paths = meta_json["ObjectTracking"][split]
             for label_subpath in split_paths:
                 label_path = os.path.join(in_root, label_subpath)
-                bin_path = label_path.replace("label", "raw").replace(".json", ".bin")
+                bin_path = label_path.replace("bbox", "raw").replace(".json", ".bin")
 
                 bin_file = bin_path.split("/")[-1]
                 frame = int(bin_file.split("_")[-1].split(".")[0])
@@ -215,8 +215,8 @@ def generate_imagesets(in_root, out_root, trajectories, use_custom=False):
             imageset_file.close()
 
 def main(args):
-    DATASET_ROOT = "/robodata/CODa"
-    DATASET_OUT = "/home/arthurz/Benchmarks/OpenPCDet/data/%s_channel/coda" % str(args.channels)
+    DATASET_ROOT = "/home/arthur/AMRL/Datasets/CODa"
+    DATASET_OUT = "/home/arthur/AMRL/Benchmarks/OpenPCDet/data/%s_channel/coda" % str(args.channels)
     if int(args.channels) < 16 or int(args.channels) > 128:
         print("Number of args %s is out of range, exiting..." % str(args.channels))
         exit(0)

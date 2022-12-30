@@ -53,8 +53,11 @@ def draw_scenes(points, gt_boxes=None, ref_boxes=None, ref_labels=None, ref_scor
 
     vis = open3d.visualization.Visualizer()
     vis.create_window()
+    # ctr = vis.get_view_control()
+    # ctr.set_lookat(np.array([0,10,0]))
+    # param = open3d.io.read_pinhole_camera_parameters("open3d_coda_params.json")    
 
-    vis.get_render_option().point_size = 1.0
+    vis.get_render_option().point_size = 2.0
     vis.get_render_option().background_color = np.zeros(3)
 
     # draw origin
@@ -77,7 +80,10 @@ def draw_scenes(points, gt_boxes=None, ref_boxes=None, ref_labels=None, ref_scor
     if ref_boxes is not None:
         vis = draw_box(vis, ref_boxes, (0, 1, 0), ref_labels, ref_scores)
 
+    # ctr.convert_from_pinhole_camera_parameters(param)
     vis.run()
+    # param = vis.get_view_control().convert_to_pinhole_camera_parameters()
+    # open3d.io.write_pinhole_camera_parameters("open3d_coda_params.json", param)
     vis.destroy_window()
 
 

@@ -30,7 +30,7 @@ class CODataset(DatasetTemplate):
         self.label_list = { file_prefix: os.path.join(self.root_path, self.split, "labels", "%s.txt"%file_prefix) 
             for file_prefix in self.sample_id_list }
         self.lidar_list = { file_prefix: os.path.join(self.root_path, self.split, "os1", 
-            "%s.npy"%file_prefix.replace("label", "raw")) for file_prefix in self.sample_id_list }
+            "%s.npy"%file_prefix.replace("bbox", "raw")) for file_prefix in self.sample_id_list }
 
         self.map_class_to_coda = self.dataset_cfg.MAP_CLASS_TO_CODA
 
@@ -92,7 +92,7 @@ class CODataset(DatasetTemplate):
         self.label_list = { file_prefix: os.path.join(self.root_path, self.split, "labels", "%s.txt"%file_prefix) 
             for file_prefix in self.sample_id_list }
         self.lidar_list = { file_prefix: os.path.join(self.root_path, self.split, "os1", 
-            "%s.npy"%file_prefix.replace("label", "raw")) for file_prefix in self.sample_id_list }
+            "%s.npy"%file_prefix.replace("bbox", "raw")) for file_prefix in self.sample_id_list }
 
     def __len__(self):
         if self._merge_all_iters_to_one_epoch:
@@ -303,6 +303,6 @@ if __name__ == '__main__':
         create_coda_infos(
             dataset_cfg=dataset_cfg,
             class_names= common_utils.CODA_CLASSES,
-            data_path=ROOT_DIR / 'data' / '64_channel' / 'coda',
-            save_path=ROOT_DIR / 'data' / '64_channel' / 'coda',
+            data_path=ROOT_DIR / 'data' / '128_channel' / 'coda',
+            save_path=ROOT_DIR / 'data' / '128_channel' / 'coda',
         )

@@ -1,3 +1,4 @@
+import os
 import argparse
 import glob
 from pathlib import Path
@@ -40,6 +41,20 @@ class DemoDataset(DatasetTemplate):
         data_file_list.sort()
         self.sample_file_list = data_file_list
 
+        self.label_file_list = [label_file for label_file in self.sample_file_list if os.path.isfile(label_file)] if self.root_path.is_dir() else [str(self.root_path)]
+        # Handle label file text replacement
+        self.label_file_list = [label_file.replace("raw", "label").replace(ext, ".txt") for label_file in self.label_file_list ]
+        # Handle label file directory replacement
+        self.label_file_list = [label_file.replace("os1", "labels", 1) if self.root_path!=label_file else label_file for label_file in self.label_file_list]
+
+        # self.class_label_map = {"Car": 1, "Pedestrian": 2, "Cyclist": 3}
+        # self.label_class_map = {1:"Car", 2:"Pedestrian", 3: "Cyclist"}
+
+        classes = common_utils.CODA_CLASSES
+
+        self.class_label_map = {obj_class: idx for idx, obj_class in enumerate(classes)}
+        self.label_class_map = {idx: obj_class for idx, obj_class in enumerate(classes)}
+
     def __len__(self):
         return len(self.sample_file_list)
 
@@ -51,12 +66,29 @@ class DemoDataset(DatasetTemplate):
         else:
             raise NotImplementedError
 
+        gt_boxes = np.loadtxt(self.label_file_list[index], dtype=np.float32, usecols=(0, 1, 2, 3, 4, 5, 6))
+        gt_labels  = np.loadtxt(self.label_file_list[index], dtype=str, usecols=(7))
+
+        convert_to_label = False
+        for label in gt_labels:
+            if label in self.class_label_map:
+                convert_to_label = True
+                break
+        if not convert_to_label:
+            print("Detected labels are floats, converting to class labels...")
+            gt_labels = np.array([self.label_class_map[int(float(label))] for label in gt_labels if int(float(label)) in self.label_class_map])
+
+        # Added for KITTI offset
+        # points[:, 2] -= 1.2
         input_dict = {
             'points': points,
             'frame_id': index,
+            'gt_boxes': gt_boxes,
+            'gt_names': gt_labels
         }
 
         data_dict = self.prepare_data(data_dict=input_dict)
+        data_dict['gt_labels'] = [label in self.class_label_map if label in self.class_label_map else int(float(label)) for label in gt_labels ]
         return data_dict
 
 
@@ -96,9 +128,9 @@ def main():
             data_dict = demo_dataset.collate_batch([data_dict])
             load_data_to_gpu(data_dict)
             pred_dicts, _ = model.forward(data_dict)
-
+            # import pdb; pdb.set_trace()
             V.draw_scenes(
-                points=data_dict['points'][:, 1:], ref_boxes=pred_dicts[0]['pred_boxes'],
+                points=data_dict['points'][:, 1:], ref_boxes=pred_dicts[0]['pred_boxes'], gt_boxes=data_dict['gt_boxes'][0],
                 ref_scores=pred_dicts[0]['pred_scores'], ref_labels=pred_dicts[0]['pred_labels']
             )
 
