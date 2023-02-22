@@ -1,7 +1,7 @@
 DATASET: 'KittiDataset'
 DATA_PATH: '../data/kitti'
 
-POINT_CLOUD_RANGE: [-24.0, -24.0, -2, 24.0, 24.0, 6]
+POINT_CLOUD_RANGE: [0, -40, -3, 70.4, 40, 1]
 
 DATA_SPLIT: {
     'train': train,
@@ -20,7 +20,7 @@ DATA_AUGMENTOR:
     DISABLE_AUG_LIST: ['placeholder']
     AUG_CONFIG_LIST:
         - NAME: gt_sampling
-          USE_ROAD_PLANE: False
+          USE_ROAD_PLANE: True
           DB_INFO_PATH:
               - kitti_dbinfos_train.pkl
           PREPARE: {
@@ -62,7 +62,7 @@ DATA_PROCESSOR:
       }
 
     - NAME: transform_points_to_voxels
-      VOXEL_SIZE: [0.1, 0.1, 0.2]
+      VOXEL_SIZE: [0.05, 0.05, 0.1]
       MAX_POINTS_PER_VOXEL: 5
       MAX_NUMBER_OF_VOXELS: {
         'train': 16000,
