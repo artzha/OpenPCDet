@@ -398,9 +398,13 @@ class Detector3DTemplate(nn.Module):
             print("Removing dense head weights")
             # Remove all keys associated with dense head
             model_state_keys = checkpoint['model_state'].keys()
+
+            temp_model_state = checkpoint['model_state'].copy()
             for key in model_state_keys:
                 if "dense_head" in key:
-                    checkpoint['model_state'].pop(key)
+                    temp_model_state.pop(key)
+
+            checkpoint['model_state'] = temp_model_state
 
         epoch = checkpoint.get('epoch', -1)
         it = checkpoint.get('it', 0.0)

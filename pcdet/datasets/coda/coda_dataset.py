@@ -148,10 +148,11 @@ class CODataset(DatasetTemplate):
         eval_det_annos = copy.deepcopy(det_annos)
         eval_gt_annos = [copy.deepcopy(info['annos']) for info in self.custom_infos]
 
-        if kwargs['eval_metric'] == 'coda':
+        #NOTE: USE CODA EVAL METRIC FOR WAYMO FOR CONSISTENCY
+        if kwargs['eval_metric'] == 'coda' or kwargs['eval_metric'] == 'waymo':
             ap_result_str, ap_dict = coda_eval(eval_det_annos, eval_gt_annos, self.map_class_to_coda)
-        else:
-            raise NotImplementedError
+        # else:
+        #     raise NotImplementedError
 
         return ap_result_str, ap_dict
 

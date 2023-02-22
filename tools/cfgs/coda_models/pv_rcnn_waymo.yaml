@@ -99,6 +99,8 @@ MODEL:
         NAME: AnchorHeadSingle
         CLASS_AGNOSTIC: False
 
+        LOAD_DENSE_HEAD_WEIGHTS: False
+
         USE_DIRECTION_CLASSIFIER: True
         DIR_OFFSET: 0.78539
         DIR_LIMIT_OFFSET: 0.0
@@ -343,7 +345,7 @@ MODEL:
                 'code_weights': [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
             }
 
-   PFE:
+    PFE:
         NAME: VoxelSetAbstraction
         POINT_SOURCE: raw_points
         NUM_KEYPOINTS: 4096
