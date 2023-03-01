@@ -3,31 +3,6 @@ DATA_PATH: '../data/128_channel/coda'
 
 POINT_CLOUD_RANGE: [-24.0, -24.0, -2, 24.0, 24.0, 6]
 
-MAP_CLASS_TO_CODA: {
-    'Scooter':        'Scooter',
-    'Bike':           'Bike',
-    'Motorcycle':     'Motorcycle',
-    'Vehicle':        'Vehicle',
-    'Person':         'Person',
-    'Tree':           'Tree',
-    'Sign':           'Sign',
-    'Canopy':         'Canopy',
-    'Traffic Lights': 'Traffic Lights',
-    'Bike Rack':      'Bike Rack',
-    'Barrier':        'Barrier',
-    'Fire Hydrant':   'Fire Hydrant',
-    'Plant':          'Plant',
-    'Pole':           'Pole',
-    'Cone':           'Cone',
-    'Chair':          'Chair',
-    'Bench':          'Bench',
-    'Table':          'Table',
-    'Trash Can':      'Trash Can',
-    'Dispenser':      'Dispenser',
-    'Screen':         'Screen',
-    'Other':           'Other'
-}
-
 DATA_SPLIT: {
     'train': train,
     'val': val,

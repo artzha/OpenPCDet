@@ -8,6 +8,7 @@ from ...ops.roiaware_pool3d import roiaware_pool3d_utils
 from ...utils import box_utils, common_utils
 from ..dataset import DatasetTemplate
 
+from ..waymo.waymo_dataset import WaymoDataset
 
 class CODataset(DatasetTemplate):
     def __init__(self, dataset_cfg, class_names, training=True, root_path=None, logger=None):
@@ -32,9 +33,27 @@ class CODataset(DatasetTemplate):
         self.lidar_list = { file_prefix: os.path.join(self.root_path, self.split, "os1", 
             "%s.npy"%file_prefix.replace("bbox", "raw")) for file_prefix in self.sample_id_list }
 
-        self.map_class_to_coda = self.dataset_cfg.MAP_CLASS_TO_CODA
+        self.map_name_to_kitti  = {
+            'Vehicle': 'Car',
+            'Person': 'Pedestrian',
+            'Bike': 'Cyclist',
+            #Bottom rows are for original KITTI dataset compatibility
+            'Pedestrian': 'Pedestrian',
+            'Car': 'Car',
+            'Cyclist': 'Cyclist',
+            'Tree': 'Other', 
+            'Pole': 'Other', 
+            'Chair': 'Other', 
+            'Table': 'Other',  
+            'Other': 'Other'
+        }
+        self.map_name_to_waymo  = {
+            'Vehicle': 'Vehicle',
+            'Person': 'Pedestrian',
+            'Bike': 'Cyclist'
+        }
 
-        self.custom_infos = []
+        self.infos = []
         self.include_data(self.mode)
 
     def include_data(self, mode):
@@ -50,7 +69,7 @@ class CODataset(DatasetTemplate):
                 infos = pickle.load(f)
                 custom_infos.extend(infos)
         # import pdb; pdb.set_trace()
-        self.custom_infos.extend(custom_infos)
+        self.infos.extend(custom_infos)
         self.logger.info('Total samples for CODa dataset: %d' % (len(custom_infos)))
 
     def get_label(self, idx):
@@ -98,13 +117,13 @@ class CODataset(DatasetTemplate):
         if self._merge_all_iters_to_one_epoch:
             return len(self.sample_id_list) * self.total_epochs
 
-        return len(self.custom_infos)
+        return len(self.infos)
 
     def __getitem__(self, index):
         if self._merge_all_iters_to_one_epoch:
-            index = index % len(self.custom_infos)
+            index = index % len(self.infos)
 
-        info = copy.deepcopy(self.custom_infos[index])
+        info = copy.deepcopy(self.infos[index])
         sample_idx = info['point_cloud']['lidar_idx']
         points = self.get_lidar(sample_idx)
         input_dict = {
@@ -127,30 +146,38 @@ class CODataset(DatasetTemplate):
         return data_dict
 
     def evaluation(self, det_annos, class_names, **kwargs):
-        if 'annos' not in self.custom_infos[0].keys():
+        if 'annos' not in self.infos[0].keys():
             return 'No ground-truth boxes for evaluation', {}
 
-        def coda_eval(eval_det_annos, eval_gt_annos, map_name_to_coda):
-            from ..coda.coda_object_eval_python import eval as coda_eval
-            from ..coda import coda_utils
+        from ..coda import coda_utils
+        def kitti_eval(eval_det_annos, eval_gt_annos):
+            from ..kitti.kitti_object_eval_python import eval as kitti_eval
+            from ..kitti import kitti_utils
 
-            coda_utils.transform_annotations_to_coda_format(eval_det_annos, map_name_to_coda=map_name_to_coda)
-            coda_utils.transform_annotations_to_coda_format(
-                eval_gt_annos, map_name_to_coda=map_name_to_coda,
+            kitti_utils.transform_annotations_to_kitti_format(eval_det_annos, map_name_to_kitti=self.map_name_to_kitti)
+            kitti_utils.transform_annotations_to_kitti_format(
+                eval_gt_annos, map_name_to_kitti=self.map_name_to_kitti,
                 info_with_fakelidar=self.dataset_cfg.get('INFO_WITH_FAKELIDAR', False)
             )
-            coda_class_names = [map_name_to_coda[x] for x in class_names]
-            ap_result_str, ap_dict = coda_eval.get_official_eval_result(
-                gt_annos=eval_gt_annos, dt_annos=eval_det_annos, current_classes=coda_class_names
+
+            kitti_class_names = [self.map_name_to_kitti[x] for x in class_names]
+            ap_result_str, ap_dict = kitti_eval.get_official_eval_result(
+                gt_annos=eval_gt_annos, dt_annos=eval_det_annos, current_classes=kitti_class_names
             )
             return ap_result_str, ap_dict
 
         eval_det_annos = copy.deepcopy(det_annos)
-        eval_gt_annos = [copy.deepcopy(info['annos']) for info in self.custom_infos]
+        eval_gt_annos = [copy.deepcopy(info['annos']) for info in self.infos]
 
-        #NOTE: USE CODA EVAL METRIC FOR WAYMO FOR CONSISTENCY
-        if kwargs['eval_metric'] == 'coda' or kwargs['eval_metric'] == 'waymo':
-            ap_result_str, ap_dict = coda_eval(eval_det_annos, eval_gt_annos, self.map_class_to_coda)
+        if kwargs['eval_metric'] == 'kitti':
+            ap_result_str, ap_dict = kitti_eval(eval_det_annos, eval_gt_annos)
+        elif kwargs['eval_metric'] == 'waymo': 
+            # Only kitti metric implemented for now
+            raise NotImplementedError
+            ap_result_str, ap_dict = waymo_eval(eval_det_annos, eval_gt_annos)
+        else:
+            raise NotImplementedError
+
         # else:
         #     raise NotImplementedError
 

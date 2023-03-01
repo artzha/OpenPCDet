@@ -34,7 +34,7 @@ def transform_annotations_to_coda_format(annos, map_name_to_coda=None, info_with
         if len(gt_boxes_lidar) > 0:
             if info_with_fakelidar:
                 gt_boxes_lidar = box_utils.boxes3d_kitti_fakelidar_to_lidar(gt_boxes_lidar)
-            import pdb; pdb.set_trace()
+
             gt_boxes_lidar[:, 2] -= gt_boxes_lidar[:, 5] / 2
             anno['location'] = np.zeros((gt_boxes_lidar.shape[0], 3))
             anno['location'][:, 0] = -gt_boxes_lidar[:, 1]  # x = -y_lidar
