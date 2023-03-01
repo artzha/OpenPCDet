@@ -1,7 +1,7 @@
 DATASET: 'CODataset'
 DATA_PATH: '../data/128_channel/coda'
 
-POINT_CLOUD_RANGE: [-75.2, -75.2, -2, 75.2, 75.2, 4]
+POINT_CLOUD_RANGE: [-25.6, -25.6, -2, 25.6, 25.6, 4]
 
 DATA_SPLIT: {
     'train': train,

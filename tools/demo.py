@@ -19,6 +19,7 @@ from pcdet.datasets import DatasetTemplate
 from pcdet.models import build_network, load_data_to_gpu
 from pcdet.utils import common_utils
 
+from pcdet.datasets import WaymoDataset
 
 class DemoDataset(DatasetTemplate):
     def __init__(self, dataset_cfg, class_names, training=True, root_path=None, logger=None, ext='.bin'):
@@ -48,9 +49,10 @@ class DemoDataset(DatasetTemplate):
             points = np.fromfile(self.sample_file_list[index], dtype=np.float32).reshape(-1, 4)
         elif self.ext == '.npy':
             points = np.load(self.sample_file_list[index])
+            points = points[:, :4]
         else:
             raise NotImplementedError
-
+        
         input_dict = {
             'points': points,
             'frame_id': index,
@@ -80,11 +82,18 @@ def main():
     args, cfg = parse_config()
     logger = common_utils.create_logger()
     logger.info('-----------------Quick Demo of OpenPCDet-------------------------')
+    #Use KITTIDataset
     demo_dataset = DemoDataset(
         dataset_cfg=cfg.DATA_CONFIG, class_names=cfg.CLASS_NAMES, training=False,
         root_path=Path(args.data_path), ext=args.ext, logger=logger
     )
-    logger.info(f'Total number of samples: \t{len(demo_dataset)}')
+
+    #Use WaymoDataset
+    # demo_dataset = WaymoDataset(
+    #     dataset_cfg=cfg.DATA_CONFIG, class_names=cfg.CLASS_NAMES,
+    #     training=False, logger=common_utils.create_logger()
+    # )
+    # logger.info(f'Total number of samples: \t{len(demo_dataset)}')
 
     model = build_network(model_cfg=cfg.MODEL, num_class=len(cfg.CLASS_NAMES), dataset=demo_dataset)
     model.load_params_from_file(filename=args.ckpt, logger=logger, to_cpu=True)
