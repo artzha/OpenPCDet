@@ -1,18 +1,16 @@
 DATASET: 'CODataset'
-DATA_PATH: '../data/128_channel/coda'
+DATA_PATH: '../data/coda'
 
-POINT_CLOUD_RANGE: [-24.0, -24.0, -2, 24.0, 24.0, 6]
+POINT_CLOUD_RANGE: [-26.0, -26.0, -2, 26.0, 26.0, 8]
 
 DATA_SPLIT: {
     'train': train,
-    'val': val,
-    'test': test
+    'test': val
 }
 
 INFO_PATH: {
     'train': [coda_infos_train.pkl],
-    'val': [coda_infos_val.pkl],
-    'test': [coda_infos_test.pkl],
+    'test': [coda_infos_val.pkl],
 }
 
 POINT_FEATURE_ENCODING: {
@@ -33,29 +31,7 @@ DATA_AUGMENTOR:
             #  ,filter_by_difficulty: [-1],
           }
 
-          SAMPLE_GROUPS: [
-            # 'Scooter:10',
-            'Bike:10',
-            # 'Motorcycle:10',
-            'Vehicle:15',
-            'Person:10',
-            'Tree:10',
-            # 'Sign:5',
-            # 'Canopy:10',
-            # 'Traffic Lights:10',
-            # 'Bike Rack:10',
-            # 'Barrier:10',
-            # 'Fire Hydrant:10',
-            # 'Plant:10',
-            'Pole:10',
-            # 'Cone:5',
-            'Chair:10',
-            # 'Bench:10',
-            'Table:15',
-            # 'Trash Can:10',
-            # 'Dispenser:10',
-            # 'Screen:10',
-            'Other:10']
+          SAMPLE_GROUPS: ['Car:20','Pedestrian:15', 'Cyclist:15']
           NUM_POINT_FEATURES: 4
           DATABASE_WITH_FAKELIDAR: False
           REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
@@ -77,13 +53,12 @@ DATA_PROCESSOR:
     - NAME: shuffle_points
       SHUFFLE_ENABLED: {
         'train': True,
-        'val': True,
         'test': False,
       }
 
     - NAME: transform_points_to_voxels
-      VOXEL_SIZE: [0.1, 0.1, 0.2]
-      MAX_POINTS_PER_VOXEL: 5
+      VOXEL_SIZE: [0.05, 0.05, 0.25]
+      MAX_POINTS_PER_VOXEL: 10
       MAX_NUMBER_OF_VOXELS: {
         'train': 150000,
         'test': 150000,

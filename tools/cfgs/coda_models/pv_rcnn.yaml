@@ -23,55 +23,11 @@ CLASS_NAMES: [
 'Other' ]
 
 DATA_CONFIG:
+    DATA_CONFIG:
     _BASE_CONFIG_: cfgs/dataset_configs/coda_dataset.yaml
-    DATA_AUGMENTOR:
-        DISABLE_AUG_LIST: ['placeholder']
-        AUG_CONFIG_LIST:
-            - NAME: gt_sampling
-              USE_ROAD_PLANE: False
-              DB_INFO_PATH:
-                  - coda_dbinfos_train.pkl
-              PREPARE: {
-                #  filter_by_min_points: ['Car:5', 'Pedestrian:5', 'Cyclist:5'],
-                #  filter_by_difficulty: [-1],
-              }
-
-              SAMPLE_GROUPS: [
-                # 'Scooter:10',
-                'Bike:10',
-                # 'Motorcycle:10',
-                'Vehicle:15',
-                'Person:10',
-                'Tree:10',
-                # 'Sign:5',
-                # 'Canopy:10',
-                # 'Traffic Lights:10',
-                # 'Bike Rack:10',
-                # 'Barrier:10',
-                # 'Fire Hydrant:10',
-                # 'Plant:10',
-                'Pole:10',
-                # 'Cone:5',
-                'Chair:10',
-                # 'Bench:10',
-                'Table:15',
-                # 'Trash Can:10',
-                # 'Dispenser:10',
-                # 'Screen:10',
-                'Other:10']
-              NUM_POINT_FEATURES: 4
-              DATABASE_WITH_FAKELIDAR: False
-              REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
-              LIMIT_WHOLE_SCENE: False
-
-            - NAME: random_world_flip
-              ALONG_AXIS_LIST: ['x']
-
-            - NAME: random_world_rotation
-              WORLD_ROT_ANGLE: [-0.78539816, 0.78539816]
-
-            - NAME: random_world_scaling
-              WORLD_SCALE_RANGE: [0.95, 1.05]
+    BALANCED_RESAMPLING: True
+    FOV_POINTS_ONLY: False
+    SHIFT_COOR: [0.0, 0.0, 0.8] # Should roughly be height of lidar from ground
 
 MODEL:
     NAME: PVRCNN
@@ -108,37 +64,7 @@ MODEL:
 
         ANCHOR_GENERATOR_CONFIG: [
             {
-                'class_name': 'Scooter',
-                'anchor_sizes': [[1.00, 0.6, 0.85]],
-                'anchor_rotations': [0, 1.57],
-                'anchor_bottom_heights': [-0.6],
-                'align_center': False,
-                'feature_map_stride': 8,
-                'matched_threshold': 0.5,
-                'unmatched_threshold': 0.35
-            },
-            {
-                'class_name': 'Bike',
-                'anchor_sizes': [[1.76, 0.6, 1.73]],
-                'anchor_rotations': [0, 1.57],
-                'anchor_bottom_heights': [-0.6],
-                'align_center': False,
-                'feature_map_stride': 8,
-                'matched_threshold': 0.5,
-                'unmatched_threshold': 0.35
-            },
-            {
-                'class_name': 'Motorcycle',
-                'anchor_sizes': [[1.76, 0.6, 1.73]],
-                'anchor_rotations': [0, 1.57],
-                'anchor_bottom_heights': [-0.6],
-                'align_center': False,
-                'feature_map_stride': 8,
-                'matched_threshold': 0.5,
-                'unmatched_threshold': 0.35
-            },
-            {
-                'class_name': 'Vehicle',
+                'class_name': 'Car',
                 'anchor_sizes': [[3.9, 1.6, 1.56]],
                 'anchor_rotations': [0, 1.57],
                 'anchor_bottom_heights': [-1.78],
@@ -148,185 +74,25 @@ MODEL:
                 'unmatched_threshold': 0.45
             },
             {
-                'class_name': 'Person',
-                'anchor_sizes': [[0.8, 0.6, 1.73]],
+                'class_name': Pedestrian,
+                'anchor_sizes': [[0.73, 0.67, 1.77]],
                 'anchor_rotations': [0, 1.57],
-                'anchor_bottom_heights': [-0.6],
+                'anchor_bottom_heights': [-0.935],
+                'align_center': False,
+                'feature_map_stride': 8,
+                'matched_threshold': 0.6,
+                'unmatched_threshold': 0.4
+            },
+            {
+                'class_name': Cyclist,
+                'anchor_sizes': [[1.70, 0.60, 1.28]],
+                'anchor_rotations': [0, 1.57],
+                'anchor_bottom_heights': [-1.18],
                 'align_center': False,
                 'feature_map_stride': 8,
                 'matched_threshold': 0.5,
                 'unmatched_threshold': 0.35
-            },
-            {
-                'class_name': 'Tree',
-                'anchor_sizes': [[6.5, 2.1, 1.2]],
-                'anchor_rotations': [0, 1.57],
-                'anchor_bottom_heights': [-0.6],
-                'align_center': False,
-                'feature_map_stride': 8,
-                'matched_threshold': 0.5,
-                'unmatched_threshold': 0.35
-            },
-            {
-                'class_name': 'Sign',
-                'anchor_sizes': [[4.5, 2.1, 1.2]],
-                'anchor_rotations': [0, 1.57],
-                'anchor_bottom_heights': [-0.6],
-                'align_center': False,
-                'feature_map_stride': 8,
-                'matched_threshold': 0.5,
-                'unmatched_threshold': 0.35
-            },
-            {
-                'class_name': 'Canopy',
-                'anchor_sizes': [[4.5, 3.9, 1.56]],
-                'anchor_rotations': [0, 1.57],
-                'anchor_bottom_heights': [-1.78],
-                'align_center': False,
-                'feature_map_stride': 8,
-                'matched_threshold': 0.6,
-                'unmatched_threshold': 0.45
-            },
-            {
-                'class_name': 'Traffic Lights',
-                'anchor_sizes': [[4.5, 3.9, 1.56]],
-                'anchor_rotations': [0, 1.57],
-                'anchor_bottom_heights': [-1.78],
-                'align_center': False,
-                'feature_map_stride': 8,
-                'matched_threshold': 0.6,
-                'unmatched_threshold': 0.45
-            },
-            {
-                'class_name': 'Bike Rack',
-                'anchor_sizes': [[4.5, 3.9, 1.56]],
-                'anchor_rotations': [0, 1.57],
-                'anchor_bottom_heights': [-1.78],
-                'align_center': False,
-                'feature_map_stride': 8,
-                'matched_threshold': 0.6,
-                'unmatched_threshold': 0.45
-            },
-            {
-                'class_name': 'Barrier',
-                'anchor_sizes': [[3.5, 1.8, 0.5]],
-                'anchor_rotations': [0, 1.57],
-                'anchor_bottom_heights': [-1.78],
-                'align_center': False,
-                'feature_map_stride': 8,
-                'matched_threshold': 0.6,
-                'unmatched_threshold': 0.45
-            },
-            {
-                'class_name': 'Fire Hydrant',
-                'anchor_sizes': [[0.5, 0.25, 0.15]],
-                'anchor_rotations': [0, 1.57],
-                'anchor_bottom_heights': [-1.78],
-                'align_center': False,
-                'feature_map_stride': 8,
-                'matched_threshold': 0.6,
-                'unmatched_threshold': 0.45
-            },
-            {
-                'class_name': 'Plant',
-                'anchor_sizes': [[2.5, 1.1, 0.5]],
-                'anchor_rotations': [0, 1.57],
-                'anchor_bottom_heights': [-1.78],
-                'align_center': False,
-                'feature_map_stride': 8,
-                'matched_threshold': 0.6,
-                'unmatched_threshold': 0.45
-            },
-            {
-                'class_name': 'Pole',
-                'anchor_sizes': [[4.5, 2.1, 1.1]],
-                'anchor_rotations': [0, 1.57],
-                'anchor_bottom_heights': [-1.78],
-                'align_center': False,
-                'feature_map_stride': 8,
-                'matched_threshold': 0.6,
-                'unmatched_threshold': 0.45
-            },
-            {
-                'class_name': 'Cone',
-                'anchor_sizes': [[0.5, 0.25, 0.15]],
-                'anchor_rotations': [0, 1.57],
-                'anchor_bottom_heights': [-1.78],
-                'align_center': False,
-                'feature_map_stride': 8,
-                'matched_threshold': 0.6,
-                'unmatched_threshold': 0.45
-            },
-            {
-                'class_name': 'Chair',
-                'anchor_sizes': [[2.5, 1.5, 0.75]],
-                'anchor_rotations': [0, 1.57],
-                'anchor_bottom_heights': [-1.78],
-                'align_center': False,
-                'feature_map_stride': 8,
-                'matched_threshold': 0.6,
-                'unmatched_threshold': 0.45
-            },
-            {
-                'class_name': 'Bench',
-                'anchor_sizes': [[2.5, 1.5, 0.75]],
-                'anchor_rotations': [0, 1.57],
-                'anchor_bottom_heights': [-1.78],
-                'align_center': False,
-                'feature_map_stride': 8,
-                'matched_threshold': 0.6,
-                'unmatched_threshold': 0.45
-            },
-            {
-                'class_name': 'Table',
-                'anchor_sizes': [[2.5, 1.5, 0.75]],
-                'anchor_rotations': [0, 1.57],
-                'anchor_bottom_heights': [-1.78],
-                'align_center': False,
-                'feature_map_stride': 8,
-                'matched_threshold': 0.6,
-                'unmatched_threshold': 0.45
-            },
-            {
-                'class_name': 'Trash Can',
-                'anchor_sizes': [[1.5, 1.0, 0.75]],
-                'anchor_rotations': [0, 1.57],
-                'anchor_bottom_heights': [-1.78],
-                'align_center': False,
-                'feature_map_stride': 8,
-                'matched_threshold': 0.6,
-                'unmatched_threshold': 0.45
-            },
-            {
-                'class_name': 'Dispenser',
-                'anchor_sizes': [[1.5, 1.8, 0.5]],
-                'anchor_rotations': [0, 1.57],
-                'anchor_bottom_heights': [-1.78],
-                'align_center': False,
-                'feature_map_stride': 8,
-                'matched_threshold': 0.6,
-                'unmatched_threshold': 0.45
-            },
-            {
-                'class_name': 'Screen',
-                'anchor_sizes': [[2.5, 1.1, 0.5]],
-                'anchor_rotations': [0, 1.57],
-                'anchor_bottom_heights': [-1.78],
-                'align_center': False,
-                'feature_map_stride': 8,
-                'matched_threshold': 0.6,
-                'unmatched_threshold': 0.45
-            },
-            {
-                'class_name': 'Other',
-                'anchor_sizes': [[2.5, 1.5, 0.75]],
-                'anchor_rotations': [0, 1.57],
-                'anchor_bottom_heights': [-1.78],
-                'align_center': False,
-                'feature_map_stride': 8,
-                'matched_threshold': 0.6,
-                'unmatched_threshold': 0.45
-            },
+            }
         ]
 
         TARGET_ASSIGNER_CONFIG:

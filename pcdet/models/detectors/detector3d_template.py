@@ -412,8 +412,7 @@ class Detector3DTemplate(nn.Module):
         self._load_state_dict(checkpoint['model_state'], strict=True)
 
         if optimizer is not None:
-            if 'optimizer_state' in checkpoint and checkpoint['optimizer_state'] is not None and\
-                self.model_cfg['DENSE_HEAD']['LOAD_DENSE_HEAD_WEIGHTS']:
+            if 'optimizer_state' in checkpoint and checkpoint['optimizer_state'] is not None:
                 logger.info('==> Loading optimizer parameters from checkpoint %s to %s'
                             % (filename, 'CPU' if to_cpu else 'GPU'))
                 optimizer.load_state_dict(checkpoint['optimizer_state'])

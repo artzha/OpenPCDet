@@ -1,5 +1,4 @@
 import numpy as np
-from ...utils import box_utils
 import copy
 
 def transform_annotations_to_coda_format(annos, map_name_to_coda=None, info_with_fakelidar=False):
@@ -9,7 +8,6 @@ def transform_annotations_to_coda_format(annos, map_name_to_coda=None, info_with
         map_name_to_coda: dict, map name to coda
         info_with_fakelidar:
     Returns:
-
     """
     for anno in annos:
         # For lyft and nuscenes, different anno key in info
@@ -50,6 +48,8 @@ def transform_annotations_to_coda_format(annos, map_name_to_coda=None, info_with
 
     return annos
 
+def fill_infos(data_path, split):
+    
 
 def calib_to_matricies(calib):
     """
