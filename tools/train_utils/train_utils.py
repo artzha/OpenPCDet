@@ -25,6 +25,7 @@ def train_one_epoch(model, optimizer, train_loader, model_func, lr_scheduler, ac
         data_time = common_utils.AverageMeter()
         batch_time = common_utils.AverageMeter()
         forward_time = common_utils.AverageMeter()
+        losses_m = common_utils.AverageMeter()
 
     end = time.time()
     for cur_it in range(start_it, total_it_each_epoch):
@@ -38,7 +39,7 @@ def train_one_epoch(model, optimizer, train_loader, model_func, lr_scheduler, ac
         data_timer = time.time()
         cur_data_time = data_timer - end
 
-        lr_scheduler.step(accumulated_iter)
+        lr_scheduler.step(accumulated_iter, cur_epoch)
 
         try:
             cur_lr = float(optimizer.lr)
@@ -73,9 +74,12 @@ def train_one_epoch(model, optimizer, train_loader, model_func, lr_scheduler, ac
 
         # log to console and tensorboard
         if rank == 0:
+            batch_size = batch.get('batch_size', None)
+            
             data_time.update(avg_data_time)
             forward_time.update(avg_forward_time)
             batch_time.update(avg_batch_time)
+            losses_m.update(loss.item() , batch_size)
             
             disp_dict.update({
                 'loss': loss.item(), 'lr': cur_lr, 'd_time': f'{data_time.val:.2f}({data_time.avg:.2f})',
@@ -90,14 +94,28 @@ def train_one_epoch(model, optimizer, train_loader, model_func, lr_scheduler, ac
                     trained_time_each_epoch = pbar.format_dict['elapsed']
                     remaining_second_each_epoch = second_each_iter * (total_it_each_epoch - cur_it)
                     remaining_second_all = second_each_iter * ((total_epochs - cur_epoch) * total_it_each_epoch - cur_it)
-
-                    disp_str = ', '.join([f'{key}={val}' for key, val in disp_dict.items() if key != 'lr'])
-                    disp_str += f', lr={disp_dict["lr"]}'
-                    batch_size = batch.get('batch_size', None)
-                    logger.info(f'epoch: {cur_epoch}/{total_epochs}, acc_iter={accumulated_iter}, cur_iter={cur_it}/{total_it_each_epoch}, batch_size={batch_size}, '
-                                f'time_cost(epoch): {tbar.format_interval(trained_time_each_epoch)}/{tbar.format_interval(remaining_second_each_epoch)}, '
-                                f'time_cost(all): {tbar.format_interval(trained_time_past_all)}/{tbar.format_interval(remaining_second_all)}, '
-                                f'{disp_str}')
+                    
+                    logger.info(
+                        'Train: {:>4d}/{} ({:>3.0f}%) [{:>4d}/{} ({:>3.0f}%)]  '
+                        'Loss: {loss.val:#.4g} ({loss.avg:#.3g})  '
+                        'LR: {lr:.3e}  '
+                        f'Time cost: {tbar.format_interval(trained_time_each_epoch)}/{tbar.format_interval(remaining_second_each_epoch)} ' 
+                        f'[{tbar.format_interval(trained_time_past_all)}/{tbar.format_interval(remaining_second_all)}]  '
+                        'Acc_iter {acc_iter:<10d}  '
+                        'Data time: {data_time.val:.2f}({data_time.avg:.2f})  '
+                        'Forward time: {forward_time.val:.2f}({forward_time.avg:.2f})  '
+                        'Batch time: {batch_time.val:.2f}({batch_time.avg:.2f})'.format(
+                            cur_epoch+1,total_epochs, 100. * (cur_epoch+1) / total_epochs,
+                            cur_it,total_it_each_epoch, 100. * cur_it / total_it_each_epoch,
+                            loss=losses_m,
+                            lr=cur_lr,
+                            acc_iter=accumulated_iter,
+                            data_time=data_time,
+                            forward_time=forward_time,
+                            batch_time=batch_time
+                            )
+                    )
+                    
                     if show_gpu_stat and accumulated_iter % (3 * logger_iter_interval) == 0:
                         # To show the GPU utilization, please install gpustat through "pip install gpustat"
                         gpu_info = os.popen('gpustat').read()
@@ -133,7 +151,7 @@ def train_model(model, optimizer, train_loader, model_func, lr_scheduler, optim_
                 start_epoch, total_epochs, start_iter, rank, tb_log, ckpt_save_dir, train_sampler=None,
                 lr_warmup_scheduler=None, ckpt_save_interval=1, max_ckpt_save_num=50,
                 merge_all_iters_to_one_epoch=False, use_amp=False,
-                use_logger_to_record=False, logger=None, logger_iter_interval=None, ckpt_save_time_interval=None, show_gpu_stat=False):
+                use_logger_to_record=False, logger=None, logger_iter_interval=None, ckpt_save_time_interval=None, show_gpu_stat=False, cfg=None):
     accumulated_iter = start_iter
 
     with tqdm.trange(start_epoch, total_epochs, desc='epochs', dynamic_ncols=True, leave=(rank == 0)) as tbar:
@@ -153,6 +171,8 @@ def train_model(model, optimizer, train_loader, model_func, lr_scheduler, optim_
                 cur_scheduler = lr_warmup_scheduler
             else:
                 cur_scheduler = lr_scheduler
+            
+            augment_disable_flag = disable_augmentation_hook(hook_config, dataloader_iter, total_epochs, cur_epoch, cfg, augment_disable_flag, logger)
             accumulated_iter = train_one_epoch(
                 model, optimizer, train_loader, model_func,
                 lr_scheduler=cur_scheduler,
@@ -228,3 +248,21 @@ def save_checkpoint(state, filename='checkpoint'):
         torch.save(state, filename, _use_new_zipfile_serialization=False)
     else:
         torch.save(state, filename)
+
+
+def disable_augmentation_hook(hook_config, dataloader, total_epochs, cur_epoch, cfg, flag, logger):
+    """
+    This hook turns off the data augmentation during training.
+    """
+    if hook_config is not None:
+        DisableAugmentationHook = hook_config.get('DisableAugmentationHook', None)
+        if DisableAugmentationHook is not None:
+            num_last_epochs = DisableAugmentationHook.NUM_LAST_EPOCHS
+            if (total_epochs - num_last_epochs) <= cur_epoch and not flag:
+                DISABLE_AUG_LIST = DisableAugmentationHook.DISABLE_AUG_LIST
+                dataset_cfg=cfg.DATA_CONFIG
+                logger.info(f'Disable augmentations: {DISABLE_AUG_LIST}')
+                dataset_cfg.DATA_AUGMENTOR.DISABLE_AUG_LIST = DISABLE_AUG_LIST
+                dataloader._dataset.data_augmentor.disable_augmentation(dataset_cfg.DATA_AUGMENTOR)
+                flag = True
+    return flag

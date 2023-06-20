@@ -12,6 +12,9 @@ from .pv_rcnn_plusplus import PVRCNNPlusPlus
 from .mppnet import MPPNet
 from .mppnet_e2e import MPPNetE2E
 from .pillarnet import PillarNet
+from .voxelnext import VoxelNeXt
+from .transfusion import TransFusion
+from .bevfusion import BevFusion
 
 __all__ = {
     'Detector3DTemplate': Detector3DTemplate,
@@ -28,7 +31,10 @@ __all__ = {
     'PVRCNNPlusPlus': PVRCNNPlusPlus,
     'MPPNet': MPPNet,
     'MPPNetE2E': MPPNetE2E,
-    'PillarNet': PillarNet
+    'PillarNet': PillarNet,
+    'VoxelNeXt': VoxelNeXt,
+    'TransFusion': TransFusion,
+    'BevFusion': BevFusion,
 }
 
 
